@@ -1,0 +1,21 @@
+# 历史记录目录（保留目录结构，不追踪用例文件）
+.testcase-assets/history/*
+!.testcase-assets/history/.gitkeep
+
+# 本机环境配置（含用户名路径，不同机器不同）
+.claude/settings.local.json
+
+# macOS 系统文件
+.DS_Store
+**/.DS_Store
+
+# Python 缓存
+__pycache__/
+*.pyc
+*.pyo
+
+# 临时导出文件（放在项目根目录时）
+/testcases_*.xlsx
+/testcases_*.xmind
+/otp_export_*.json
+/export_data_*.json
