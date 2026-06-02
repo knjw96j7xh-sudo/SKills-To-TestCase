@@ -1,0 +1,85 @@
+{
+  "_comment": "Jira CSV 导出格式定义，用于 testcase-creator 导出 Jira 兼容的 CSV 文件",
+  "format": "CSV",
+  "encoding": "UTF-8 with BOM",
+  "delimiter": ",",
+  "multiStepRule": "firstRowOnly",
+  "columns": [
+    {
+      "csvColumn": "序号",
+      "field": "caseId",
+      "description": "用例编号（如 TC-001）",
+      "fillRule": "firstRowOnly"
+    },
+    {
+      "csvColumn": "标题",
+      "field": "title",
+      "description": "测试点标题",
+      "fillRule": "firstRowOnly"
+    },
+    {
+      "csvColumn": "描述",
+      "field": "preconditions",
+      "description": "前置条件",
+      "fillRule": "firstRowOnly"
+    },
+    {
+      "csvColumn": "优先级",
+      "field": "priority",
+      "description": "优先级",
+      "fillRule": "firstRowOnly",
+      "mapping": {
+        "P0": "High",
+        "P1": "Medium",
+        "P2": "Low"
+      }
+    },
+    {
+      "csvColumn": "步骤ID",
+      "field": "stepNo",
+      "description": "步骤序号（1, 2, 3...）",
+      "fillRule": "everyRow"
+    },
+    {
+      "csvColumn": "步骤",
+      "field": "action",
+      "description": "操作步骤描述",
+      "fillRule": "everyRow"
+    },
+    {
+      "csvColumn": "测试数据",
+      "field": "testData",
+      "description": "测试数据（可选，接口测试时填请求数据）",
+      "fillRule": "everyRow",
+      "default": ""
+    },
+    {
+      "csvColumn": "期望结果",
+      "field": "expected",
+      "description": "预期结果",
+      "fillRule": "everyRow"
+    },
+    {
+      "csvColumn": "需求",
+      "field": "relatedCheckpoints",
+      "description": "关联检查点编号",
+      "fillRule": "firstRowOnly"
+    },
+    {
+      "csvColumn": "测试用例集",
+      "field": "suiteName",
+      "description": "所属测试套件名称",
+      "fillRule": "firstRowOnly"
+    }
+  ],
+  "fillRuleDescription": {
+    "firstRowOnly": "仅在用例的第一行填写，后续步骤行留空",
+    "everyRow": "每一行都填写"
+  },
+  "notes": [
+    "文件编码必须为 UTF-8 with BOM，否则 Jira 导入时中文会乱码",
+    "多步骤用例：首行填写 序号/标题/描述/优先级/需求/测试用例集，后续行仅填写 步骤ID/步骤/测试数据/期望结果",
+    "优先级映射：P0->High, P1->Medium, P2->Low",
+    "测试数据列可为空，接口测试场景可填写请求/响应数据"
+  ]
+}

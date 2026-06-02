@@ -1,6 +1,6 @@
 ---
 name: testcase-creator
-description: 基于检查点/评审点资产，按标准五阶段流程生成测试用例，支持评审迭代与 OTP 导出
+description: 基于检查点/评审点资产，按标准五阶段流程生成测试用例，支持评审迭代与多平台导出（Jira CSV / OTP / Excel / XMind）
 triggers:
   - /testcase-creator
 ---
@@ -23,7 +23,15 @@ triggers:
    - 常用导出路径（用于 OTP 导出提示）
    - OTP 字段映射配置（用于生成 JSON 时替换字段名）
    - 默认优先级规则、评审默认应用维度
-4. 初始化通过后，输出：
+4. **配置校验**：检查 `project.config.md` 是否仍包含占位符（如 `[填写项目中文名]`、`[填写英文缩写]`）。若检测到占位符，输出警告：
+   ```
+   [WARN] project.config.md 中存在未填写的占位符，请先完善配置：
+     - [填写项目中文名] → 请替换为实际项目名称
+     - [填写英文缩写] → 请替换为实际英文标识
+   是否继续？(Y/N)
+   ```
+   用户确认继续则继续流程，否则中止。
+5. 初始化通过后，输出：
 
 ```
 [OK] 资产加载成功
@@ -71,6 +79,12 @@ triggers:
 [OK] 若以上解析正确，请回复「确认」继续阶段 2。
 [FAIL] 若需修正，请指出错误内容后重新确认。
 ```
+
+**用户确认后**，执行以下操作：
+1. 提取「测试对象」作为模块名（取简短关键词，如"碳盘查清单"、"用户中心"）
+2. **模块名清理**：移除文件系统不允许的字符（`/ \ : * ? " < > |`），替换为空格或下划线
+3. 创建本次运行的子目录：`.testcase-assets/history/<YYYYMMDD>_<HHMMSS>_<模块名>/`
+4. 后续所有文件均写入此子目录
 
 ---
 
@@ -124,7 +138,7 @@ triggers:
 [OK] 结构化完成，请回复「生成用例」进入阶段 3。
 ```
 
-3. 将上述内容写入 `.testcase-assets/history/0-用例准备_<timestamp>.md`
+3. 将上述内容写入 `.testcase-assets/history/<运行目录>/0-用例准备.md`
 
 ---
 
@@ -152,7 +166,7 @@ triggers:
 [OK] 请回复「进入评审」进入阶段 4，或直接告诉我需要修改的用例编号和修改内容。
 ```
 
-3. 将用例表写入 `.testcase-assets/history/1-评审记要_<timestamp>.md`
+3. 将用例表写入 `.testcase-assets/history/<运行目录>/1-评审记要.md`
 
 ---
 
@@ -222,7 +236,7 @@ triggers:
 ```
 
 4. 若选 A/B/C：合并补充用例，重新输出完整用例表，并询问「是否再次评审？」（支持多轮迭代）
-5. 评审通过后将最终用例表写入 `.testcase-assets/history/1-评审记要_<timestamp>.md`（追加评审记录）
+5. 评审通过后将最终用例表写入 `.testcase-assets/history/<运行目录>/1-评审记要.md`（追加评审记录）
 
 ---
 
@@ -232,42 +246,46 @@ triggers:
 
 **执行步骤：**
 
-1. 输出最终定稿用例表（完整版），写入 `.testcase-assets/history/2-用例定稿_<timestamp>.md`
+1. 输出最终定稿用例表（完整版），写入 `.testcase-assets/history/<运行目录>/2-用例定稿.md`
 
-2. 询问是否导入 OTP：
-
-```
-【阶段 5 — 定稿导入】
-[OK] 用例定稿已保存至 2-用例定稿_<timestamp>.md
-
-是否需要生成 OTP 导入文件？
-  Y. 是，生成 OTP 树形 JSON（结构参考 .testcase-assets/templates/otp-schema.json）
-  N. 否，本次到此结束
-```
-
-3. **若选 Y**：
-   - 从 `project.config.md` 中读取项目名称、模块名称（无需再次询问用户）
-   - 检查 `project.config.md` 中『OTP 字段映射配置』是否全部勾选 [x]：
-     - 未全部勾选 → 提示："[WARN] OTP 字段映射尚未完成对齐，导入可能失败。建议先在 project.config.md 中确认所有字段，再生成 JSON。是否付继续？(Y/N)"
-     - 已全部勾选 → 直接生成
-   - 按 `project.config.md` 中的字段映射表替换 JSON 中的字段名
-   - 生成 OTP JSON 文件，命名为 `otp_export_<英文标识>_<timestamp>.json`
-   - 输出文件路径并展示 JSON 内容预览（前20行）
-   - 提示：`[EXPORT] 建议先用 1~2 条用例测试导入是否成功，确认无误后再批量导入。`
-
-4. 询问额外格式导出：
+2. 询问导出平台（可多选，逗号分隔）：
 
 ```
-[格式导出]
-是否需要导出 Excel 或 XMind 格式？（可多选，逗号分隔）
-  E. 导出 Excel (.xlsx)   — 带颜色分类、冻结表头、场景统计
-  X. 导出 XMind (.xmind) — 按检查点分组的思维导图
-  N. 不需要，结束
+【阶段 5 — 定稿导出】
+[OK] 用例定稿已保存。
+
+请选择导出平台（可多选，逗号分隔）：
+  J. Jira CSV（.csv，可直接导入 Jira）
+  O. OTP（树形 JSON，手动导入 OTP 系统）
+  E. Excel（.xlsx 表格，带颜色分类、冻结表头）
+  X. XMind（思维导图，用于用例展示和评审）
+  N. 不需要导出，本次到此结束
 ```
 
-**若选 E 或 X**，执行以下步骤：
+3. **按所选平台分别执行导出**：
 
-**步骤 A — 序列化用例数据**：将最终用例写入 `.testcase-assets/history/export_data_<timestamp>.json`，格式：
+### 3a. Jira CSV 导出（若选 J）
+
+- 按 `.testcase-assets/templates/csv-schema.json` 的字段映射规则生成 CSV
+- 运行转换脚本：
+  ```bash
+  python3 .testcase-assets/scripts/md_to_csv.py \
+    .testcase-assets/history/<运行目录>/2-用例定稿.md \
+    .testcase-assets/history/<运行目录>/jira_export.csv
+  ```
+- 编码：UTF-8 with BOM
+- 提示：`[EXPORT] Jira CSV 已生成，请手动导入 Jira 系统。`
+
+### 3b. OTP 导出（若选 O）
+
+- 从 `project.config.md` 中读取项目名称、模块名称
+- 按 `.testcase-assets/templates/otp-schema.json` 的结构生成 JSON
+- 输出文件 `.testcase-assets/history/<运行目录>/otp_export.json` 并展示内容预览
+- 提示：`[EXPORT] 请手动将此文件导入 OTP 系统。`
+
+### 3c. Excel / XMind 导出（若选 E 或 X）
+
+**步骤 A — 序列化用例数据**：将最终用例写入 `.testcase-assets/history/<运行目录>/export_data.json`，格式：
 
 ```json
 {
@@ -296,28 +314,27 @@ triggers:
 - 若选 **E**（Excel）：
   ```bash
   python3 .testcase-assets/scripts/export_excel.py \
-    .testcase-assets/history/export_data_<timestamp>.json \
-    .testcase-assets/history/testcases_<timestamp>.xlsx
+    .testcase-assets/history/<运行目录>/export_data.json \
+    .testcase-assets/history/<运行目录>/testcases.xlsx
   ```
 - 若选 **X**（XMind）：
   ```bash
   python3 .testcase-assets/scripts/export_xmind.py \
-    .testcase-assets/history/export_data_<timestamp>.json \
-    .testcase-assets/history/testcases_<timestamp>.xmind
+    .testcase-assets/history/<运行目录>/export_data.json \
+    .testcase-assets/history/<运行目录>/testcases.xmind
   ```
 
 **步骤 C — 确认输出**：
 ```
 [OK] 文件已生成：
-  Excel → .testcase-assets/history/testcases_<timestamp>.xlsx
-  XMind → .testcase-assets/history/testcases_<timestamp>.xmind
+  Excel → .testcase-assets/history/<运行目录>/testcases.xlsx
+  XMind → .testcase-assets/history/<运行目录>/testcases.xmind
 [TIP] XMind 文件需 XMind 8 或更高版本打开。
 ```
 
-4. **若选 N**：
-   - 输出总结摘要后结束
+4. **更新历史索引**：将本次运行记录追加到 `.testcase-assets/history/history-index.md`
 
-**流程结束输出：**
+5. **流程结束输出：**
 
 ```markdown
 ##  本次用例生成完成
@@ -328,10 +345,12 @@ triggers:
 | 用例总数 | X 条（正向X / 异常X / 边界X / 并发X） |
 | 关联检查点 | X 个 |
 | 评审轮次 | X 轮 |
-| 定稿文件（MD） | .testcase-assets/history/2-用例定稿_xxx.md |
-| 定稿文件（Excel） | .testcase-assets/history/testcases_xxx.xlsx（如已生成） |
-| 定稿文件（XMind） | .testcase-assets/history/testcases_xxx.xmind（如已生成） |
-| OTP 导出 | otp_export_xxx.json（如已生成） |
+| 运行目录 | .testcase-assets/history/<运行目录>/ |
+| 定稿文件 | 2-用例定稿.md |
+| Jira 导出 | jira_export.csv（如已生成） |
+| OTP 导出 | otp_export.json（如已生成） |
+| Excel 导出 | testcases.xlsx（如已生成） |
+| XMind 导出 | testcases.xmind（如已生成） |
 
 ---
 [TIP] 是否有新的检查点或评审点需要沉淀？请参见下方《资产沉淀》说明。
@@ -376,11 +395,29 @@ triggers:
 
 ---
 
-## [REF] 附：文件命名规范
+## [REF] 附：目录与文件命名规范
 
-| 文件 | 命名格式 | 示例 |
-|------|----------|------|
-| 用例准备 | `0-用例准备_YYYYMMDD_HHMMSS.md` | `0-用例准备_20260601_143000.md` |
-| 评审记要 | `1-评审记要_YYYYMMDD_HHMMSS.md` | `1-评审记要_20260601_150000.md` |
-| 用例定稿 | `2-用例定稿_YYYYMMDD_HHMMSS.md` | `2-用例定稿_20260601_160000.md` |
-| OTP导出 | `otp_export_YYYYMMDD_HHMMSS.json` | `otp_export_20260601_160000.json` |
+### 运行目录命名
+
+```
+.testcase-assets/history/<YYYYMMDD>_<HHMMSS>_<模块名>/
+```
+
+示例：`.testcase-assets/history/20260601_143000_碳盘查清单/`
+
+### 目录内文件
+
+| 文件 | 说明 |
+|------|------|
+| `0-用例准备.md` | 阶段 2 输出：需求要素 + 检查点关联 |
+| `1-评审记要.md` | 阶段 3/4 输出：用例表 + 评审记录 |
+| `2-用例定稿.md` | 阶段 5 输出：最终定稿用例表 |
+| `jira_export.csv` | Jira CSV 导出（若选 J） |
+| `otp_export.json` | OTP JSON 导出（若选 O） |
+| `export_data.json` | Excel/XMind 中间数据（若选 E/X） |
+| `testcases.xlsx` | Excel 导出（若选 E） |
+| `testcases.xmind` | XMind 导出（若选 X） |
+
+### 历史索引
+
+`.testcase-assets/history/history-index.md` 自动追加每次运行记录。

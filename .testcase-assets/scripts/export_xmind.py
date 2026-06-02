@@ -325,10 +325,42 @@ def build_stat_sheet(data: dict) -> dict:
 # ─── 主导出函数 ────────────────────────────────────────────────────────────────
 
 def export_xmind(input_json: str, output_xmind: str):
-    with open(input_json, encoding="utf-8") as f:
-        data = json.load(f)
+    import os
+
+    # 验证输入文件
+    if not os.path.exists(input_json):
+        print(f"[FAIL] 输入文件不存在: {input_json}")
+        sys.exit(1)
+
+    # 确保输出目录存在
+    output_dir = os.path.dirname(output_xmind)
+    if output_dir and not os.path.exists(output_dir):
+        try:
+            os.makedirs(output_dir)
+        except Exception as e:
+            print(f"[FAIL] 无法创建输出目录: {e}")
+            sys.exit(1)
+
+    try:
+        with open(input_json, encoding="utf-8") as f:
+            data = json.load(f)
+    except json.JSONDecodeError as e:
+        print(f"[FAIL] JSON 格式错误: {e}")
+        sys.exit(1)
+    except UnicodeDecodeError:
+        print(f"[FAIL] 文件编码错误，请确保为 UTF-8: {input_json}")
+        sys.exit(1)
+    except Exception as e:
+        print(f"[FAIL] 读取文件失败: {e}")
+        sys.exit(1)
 
     testcases = data.get("testcases", [])
+    if not isinstance(testcases, list):
+        print(f"[FAIL] JSON 中 testcases 字段必须是数组，当前类型: {type(testcases).__name__}")
+        sys.exit(1)
+
+    if not testcases:
+        print("[WARN] testcases 为空，将生成仅含标题的 XMind 文件")
 
     content = [
         build_testcase_sheet(data),
@@ -348,13 +380,20 @@ def export_xmind(input_json: str, output_xmind: str):
         }
     }
 
-    with zipfile.ZipFile(output_xmind, "w", zipfile.ZIP_DEFLATED) as zf:
-        zf.writestr("content.json",
-                    json.dumps(content, ensure_ascii=False, indent=2))
-        zf.writestr("metadata.json",
-                    json.dumps(metadata, ensure_ascii=False, indent=2))
-        zf.writestr("manifest.json",
-                    json.dumps(manifest, ensure_ascii=False, indent=2))
+    try:
+        with zipfile.ZipFile(output_xmind, "w", zipfile.ZIP_DEFLATED) as zf:
+            zf.writestr("content.json",
+                        json.dumps(content, ensure_ascii=False, indent=2))
+            zf.writestr("metadata.json",
+                        json.dumps(metadata, ensure_ascii=False, indent=2))
+            zf.writestr("manifest.json",
+                        json.dumps(manifest, ensure_ascii=False, indent=2))
+    except PermissionError:
+        print(f"[FAIL] 无写入权限: {output_xmind}")
+        sys.exit(1)
+    except Exception as e:
+        print(f"[FAIL] 写入 XMind 失败: {e}")
+        sys.exit(1)
 
     print(f"[OK] XMind 已生成：{output_xmind}（共 {len(testcases)} 条用例，2 个 Sheet）")
     print(f"     Sheet 1：测试用例（检查点 → 场景类型 → 用例 → 步骤）")

@@ -15,30 +15,47 @@
 │
 ├── .claude/
 │   ├── commands/
-│   │   └── testcase-creator.md       # Claude Code 触发词：/testcase-creator
+│   │   ├── testcase-creator.md       # Claude Code 触发词：/testcase-creator
+│   │   └── testcase-export.md        # Claude Code 触发词：/testcase-export（独立导出）
 │   └── settings.local.json           # Bash 权限白名单（pdftotext / 导出脚本）
+│
+├── .agents/
+│   └── skills/
+│       ├── source-command-testcase-creator/
+│       │   └── SKILL.md              # Agent/Codex Skill：用例生成
+│       └── source-command-testcase-export/
+│           └── SKILL.md              # Agent/Codex Skill：独立导出
 │
 ├── .testcase-assets/                  # 项目级可复用资产（建议 Git 管理）
 │   ├── project.config.md             # 项目配置（首次使用前必填）
-│   ├── checkpoints-index.md          # 检查点索引（UC / PAY / LIST / FILE / RISK / API / CARB / APPR）
-│   ├── review-expectations-index.md  # 评审点索引（UX / DATA / COMP / EXEC / BUG / SEC / PERF）
+│   ├── checkpoints-index.md          # 检查点索引（UC / PAY / LIST / FILE / RISK / API）
+│   ├── review-expectations-index.md  # 评审点索引（UX / DATA / COMP / EXEC / BUG / SEC）
 │   ├── templates/
 │   │   ├── testcase-table.md         # 用例表输出模板
-│   │   └── otp-schema.json           # OTP 树形 JSON 结构示例
+│   │   ├── otp-schema.json           # OTP 树形 JSON 结构示例
+│   │   ├── csv-schema.json           # Jira CSV 字段映射规则
+│   │   └── jira-csv-template.csv     # Jira CSV 示例文件
 │   ├── scripts/
 │   │   ├── export_excel.py           # 用例导出为 Excel（需 Python + openpyxl）
-│   │   └── export_xmind.py           # 用例导出为 XMind（需 Python，无额外依赖）
+│   │   ├── export_xmind.py           # 用例导出为 XMind（需 Python，无额外依赖）
+│   │   └── md_to_csv.py              # 用例定稿 MD 转 Jira CSV（需 Python，无额外依赖）
 │   └── history/                      # 每次生成的历史记录（自动写入）
-│       ├── 0-用例准备_xxx.md
-│       ├── 1-评审记要_xxx.md
-│       ├── 2-用例定稿_xxx.md
-│       ├── export_data_xxx.json      # Excel/XMind 中间数据
-│       ├── testcases_xxx.xlsx
-│       ├── testcases_xxx.xmind
-│       └── otp_export_xxx.json
+│       ├── history-index.md          # 历史运行索引（自动追加）
+│       ├── .gitkeep                  # 目录占位文件
+│       └── <YYYYMMDD>_<HHMMSS>_<模块名>/   # 每次运行的独立子目录
+│           ├── 0-用例准备.md
+│           ├── 1-评审记要.md
+│           ├── 2-用例定稿.md
+│           ├── jira_export.csv       # Jira CSV 导出（可选）
+│           ├── otp_export.json       # OTP JSON 导出（可选）
+│           ├── export_data.json      # Excel/XMind 中间数据（可选）
+│           ├── testcases.xlsx        # Excel 导出（可选）
+│           └── testcases.xmind       # XMind 导出（可选）
 │
 ├── TESTCASE_GUIDE.md                 # 纯对话工具（ChatGPT 等）使用指南
-├── init-testcase.sh                  # 一键初始化脚本，将资产复制到目标项目
+├── init-testcase.sh                  # 一键初始化脚本（macOS/Linux）
+├── init-testcase.ps1                 # 一键初始化脚本（Windows）
+├── CHANGELOG.md                      # 版本变更记录
 └── README.md                         # 本文件
 ```
 
@@ -50,23 +67,30 @@
 |------|------|-------|---------|
 | Python 3.x | 运行导出脚本 | 系统自带 | [python.org](https://python.org) 或 `winget install Python.Python.3` |
 | openpyxl | Excel 导出 | `pip3 install openpyxl` | `pip install openpyxl` |
-| pdftotext | 读取 PDF | `brew install poppler` | `winget install poppler`（或 WSL: `apt install poppler-utils` |
+| pdftotext | 读取 PDF | `brew install poppler` | `winget install poppler`（或 WSL: `apt install poppler-utils`）|
 | python-docx | 读取 .docx | 不需要（系统自带 textutil） | `pip install python-docx` |
 | XMind 8+ | 打开 .xmind | [xmind.app](https://xmind.app) | [xmind.app](https://xmind.app) |
 
 > **Windows 用户注意**：建议在 WSL（Windows Subsystem for Linux）中运行 Claude Code，这样 bash 命令和 Linux 路径均可直接使用，体验与 macOS 一致。Cursor 原生支持 Windows，无需额外配置。
 
-> XMind 导出无需安装任何额外 Python 包，直接运行即可。
+> XMind 和 Jira CSV 导出无需安装任何额外 Python 包，直接运行即可。
+
+---
+
+## 可用命令
+
+| 命令 | 平台 | 用途 |
+|------|------|------|
+| `/testcase-creator` | Claude Code / Cursor | 完整用例生成流程（5 阶段，含导出） |
+| `/testcase-export` | Claude Code | 独立导出（从已有定稿文件导出，无需重走流程） |
+| `source-command-testcase-creator` | Codex | 完整用例生成流程（5 阶段，含导出） |
+| `source-command-testcase-export` | Codex | 独立导出（从已有定稿文件导出，无需重走流程） |
 
 ---
 
 ## 五阶段流程概览
 
-```
-1. 需求输入  →  2. 输入结构化  →  3. 用例生成  →  4. 评审优化  →  5. 定稿导入
-   用户确认        选择检查点       生成用例表      多轮迭代       OTP / Excel / XMind
-   支持 PDF/MD     写入0-用例准备   含优先级列      关联评审点     写入history目录
-```
+![用例生成 Skill 流程图](assets/testcase-skill-flow.png)
 
 ### 1. 需求输入
 支持四种来源：
@@ -75,26 +99,30 @@
 - **C** 接口文档链接或本地路径
 - **D** 本地文件（`.md` / `.docx` / `.pdf`）
 
-提取测试对象、业务规则、限制条件，输出确认清单。
+提取测试对象、业务规则、限制条件，输出确认清单。确认后创建运行子目录。
 
 ### 2. 输入结构化
-读取 `checkpoints-index.md`，展示所有分类和检查点，用户选择关联编号，生成结构化摘要写入 `0-用例准备` 文件。
+读取 `checkpoints-index.md`，展示所有分类和检查点，用户选择关联编号，生成结构化摘要写入 `0-用例准备.md`。
 
 ### 3. 用例生成
-基于需求要素 + 检查点，生成覆盖正向/异常/边界/并发四类的用例表，包含「优先级」列（P0–P3），写入 `1-评审记要` 文件。
+基于需求要素 + 检查点，生成覆盖正向/异常/边界/并发四类的用例表，包含「优先级」列（P0–P3），写入 `1-评审记要.md`。
 
 > 优先级规则：P0=异常场景（阻断性错误）/ P1=正向主流程/边界 / P2=并发 / P3=体验类
 
 ### 4. 评审优化
 读取 `review-expectations-index.md`，用户选择评审维度，AI 独立视角逐条判断覆盖情况，输出评审报告和补充建议，支持多轮迭代。
 
-### 5. 定稿导入
-写入 `2-用例定稿` 文件，然后依次询问：
+### 5. 定稿导出
+写入 `2-用例定稿.md`，然后统一选择导出平台（可多选）：
 
-1. **OTP 导出**（可选）：生成 `otp_export_xxx.json`，手动导入 OTP 系统
-2. **格式导出**（可选，可多选）：
-   - `E` → Excel (`.xlsx`)：带场景颜色、冻结表头、优先级、执行状态、统计 Sheet
-   - `X` → XMind (`.xmind`)：四级结构（检查点 → 场景类型 → 用例 → 步骤），含统计总览 Sheet
+| 选项 | 格式 | 说明 |
+|------|------|------|
+| **J** | Jira CSV (`.csv`) | 可直接导入 Jira，UTF-8 with BOM 编码 |
+| **O** | OTP JSON (`.json`) | 树形结构，手动导入 OTP 系统 |
+| **E** | Excel (`.xlsx`) | 带场景颜色、冻结表头、优先级、统计 Sheet |
+| **X** | XMind (`.xmind`) | 四级结构（检查点 → 场景类型 → 用例 → 步骤） |
+
+导出完成后自动更新 `history-index.md` 索引。
 
 ---
 
@@ -116,9 +144,10 @@ bash init-testcase.sh /path/to/your-project
 ```
 
 > 脚本会自动完成：
-> - 复制所有资产文件（skill.md / commands / checkpoints / scripts 等）
+> - 复制所有资产文件（Agent/Codex skills / Cursor skill.md / Claude commands / checkpoints / scripts / templates 等）
 > - 根据当前用户名动态生成 .claude/settings.local.json（Windows 会自动检测 WSL）
 > - 在目标项目的 .gitignore 追加 history/ 规则
+> - 初始化 history-index.md
 
 # 5. 必填：编辑项目配置
 vim /path/to/your-project/.testcase-assets/project.config.md
@@ -148,6 +177,12 @@ bash init-testcase.sh .   # 用 . 表示当前目录（本仓库本身）
 2. 在 Claude Code 中输入 `/testcase-creator` 触发流程
 3. 选择需求来源 D（PDF）时，工具会自动使用 `pdftotext` 读取内容
 
+### Codex 用户
+1. 完成上述初始化，确认 `.agents/skills/` 下存在 `source-command-testcase-creator` 和 `source-command-testcase-export`
+2. `.agents/skills/` 是面向 Agent 类工具的技能目录；在本项目中，Codex 可通过该目录识别项目技能
+3. 在 Codex 中直接说明“运行 testcase-creator”或“生成测试用例”，Codex 会匹配 `source-command-testcase-creator`
+4. 已有定稿文件时，说明“运行 testcase-export”或“导出测试用例”，Codex 会匹配 `source-command-testcase-export`
+
 ### 纯对话工具（ChatGPT / Copilot 等）
 1. 打开 `TESTCASE_GUIDE.md`，将全文复制
 2. 同时复制以下文件内容，一并粘贴到对话开头：
@@ -160,6 +195,15 @@ bash init-testcase.sh .   # 用 . 表示当前目录（本仓库本身）
 ---
 
 ## 导出格式说明
+
+### Jira CSV（md_to_csv.py）
+
+| 特性 | 说明 |
+|------|------|
+| 编码 | UTF-8 with BOM（确保 Jira 导入时中文不乱码） |
+| 列 | 序号 / 标题 / 描述 / 优先级 / 步骤ID / 步骤 / 测试数据 / 期望结果 / 需求 / 测试用例集 |
+| 多步骤用例 | 首行填写用例基础信息，后续行仅填写步骤详情 |
+| 优先级映射 | P0→High, P1→Medium, P2→Low |
 
 ### Excel（export_excel.py）
 
@@ -185,9 +229,57 @@ bash init-testcase.sh .   # 用 . 表示当前目录（本仓库本身）
 
 ```bash
 # 手动运行导出（Claude Code 会自动调用）
+python3 .testcase-assets/scripts/md_to_csv.py <input.md> <output.csv>
 python3 .testcase-assets/scripts/export_excel.py <input.json> <output.xlsx>
 python3 .testcase-assets/scripts/export_xmind.py <input.json> <output.xmind>
 ```
+
+---
+
+## 历史记录管理
+
+每次运行 `/testcase-creator` 会创建独立子目录：
+
+```
+.testcase-assets/history/
+├── history-index.md                          # 索引文件（自动追加）
+├── 20260601_174203_碳盘查清单/               # 第 1 次运行
+│   ├── 0-用例准备.md
+│   ├── 1-评审记要.md
+│   ├── 2-用例定稿.md
+│   ├── jira_export.csv
+│   └── otp_export.json
+└── 20260615_090000_用户中心/                 # 第 2 次运行
+    └── ...
+```
+
+- **history-index.md**：自动记录每次运行的时间、模块、用例数、导出文件
+- **独立导出**：使用 `/testcase-export` 可随时从已有定稿文件导出，无需重走流程
+
+### 命名规范
+
+**子目录命名**：`<YYYYMMDD>_<HHMMSS>_<模块名>`
+
+| 部分 | 格式 | 示例 |
+|------|------|------|
+| 日期 | YYYYMMDD | 20260601 |
+| 时间 | HHMMSS | 174203 |
+| 模块名 | 中文关键词（自动清理特殊字符） | 碳盘查清单 |
+
+示例：`20260601_174203_碳盘查清单`
+
+**子目录内文件命名**：
+
+| 文件 | 说明 |
+|------|------|
+| `0-用例准备.md` | 阶段 2 输出：需求要素 + 检查点关联 |
+| `1-评审记要.md` | 阶段 3/4 输出：用例表 + 评审记录 |
+| `2-用例定稿.md` | 阶段 5 输出：最终定稿用例表 |
+| `jira_export.csv` | Jira CSV 导出（若选 J） |
+| `otp_export.json` | OTP JSON 导出（若选 O） |
+| `export_data.json` | Excel/XMind 中间数据（若选 E/X） |
+| `testcases.xlsx` | Excel 导出（若选 E） |
+| `testcases.xmind` | XMind 导出（若选 X） |
 
 ---
 
@@ -198,23 +290,57 @@ python3 .testcase-assets/scripts/export_xmind.py <input.json> <output.xmind>
 | 新增检查点 | 追加到对应分类末尾，编号递增，不修改已有编号 |
 | 废弃检查点 | 描述后追加 `[已废弃]`，不删除行 |
 | 新增评审点 | 同上 |
-| 历史文件 | `.testcase-assets/history/` 下只新增，不删除，时间戳区分 |
+| 历史文件 | 每次运行归入独立子目录，`history-index.md` 自动维护索引 |
 | Git 提交 | 更新索引文件后单独提交，格式：`chore: 沉淀检查点 XX-XX` |
 | history/ 目录 | 已加入 `.gitignore`，不纳入版本控制（可按需调整） |
 
 ---
 
-## 文件命名规范
+## Jira CSV 导入说明
 
-| 文件类型 | 格式 | 示例 |
-|----------|------|------|
-| 用例准备 | `0-用例准备_YYYYMMDD_HHMMSS.md` | `0-用例准备_20260601_143000.md` |
-| 评审记要 | `1-评审记要_YYYYMMDD_HHMMSS.md` | `1-评审记要_20260601_150000.md` |
-| 用例定稿 | `2-用例定稿_YYYYMMDD_HHMMSS.md` | `2-用例定稿_20260601_160000.md` |
-| 导出中间数据 | `export_data_YYYYMMDD_HHMMSS.json` | `export_data_20260601_160000.json` |
-| Excel 导出 | `testcases_YYYYMMDD_HHMMSS.xlsx` | `testcases_20260601_160000.xlsx` |
-| XMind 导出 | `testcases_YYYYMMDD_HHMMSS.xmind` | `testcases_20260601_160000.xmind` |
-| OTP 导出 | `otp_export_YYYYMMDD_HHMMSS.json` | `otp_export_20260601_160000.json` |
+> **注意**：CSV 文件编码为 UTF-8 with BOM，确保 Jira 导入时中文不乱码。
+
+### 导入步骤
+
+1. 运行流程至阶段 5，选择「J」生成 CSV 文件（或使用 `/testcase-export` 独立导出）
+2. 登录 Jira 系统，进入目标项目
+3. 导入路径：
+   - **Jira Cloud**：项目设置 → Issue Types → Import Issues from CSV
+   - **Jira Server/Data Center**：项目 → 导入与导出 → 从 CSV 导入
+4. 上传 `jira_export.csv`，按向导完成字段映射
+5. 确认导入，检查用例是否正确创建
+
+### CSV 字段说明
+
+| CSV 列 | Jira 字段 | 说明 |
+|--------|-----------|------|
+| 序号 | Issue Key / 自定义字段 | 用例编号（TC-001） |
+| 标题 | Summary | 测试点标题 |
+| 描述 | Description | 前置条件 |
+| 优先级 | Priority | High / Medium / Low |
+| 步骤ID | Test Steps (Step #) | 步骤序号 |
+| 步骤 | Test Steps (Action) | 操作步骤 |
+| 测试数据 | Test Steps (Data) | 测试数据（可为空） |
+| 期望结果 | Test Steps (Expected Result) | 预期结果 |
+| 需求 | Labels / 自定义字段 | 关联检查点编号 |
+| 测试用例集 | Component / 自定义字段 | 所属测试套件 |
+
+### 常见问题
+
+| 问题 | 解决方案 |
+|------|----------|
+| 中文乱码 | 确保 CSV 为 UTF-8 with BOM 编码，Jira 导入时选择 UTF-8 |
+| 多步骤用例丢失 | Jira 需要支持 Test Steps 的插件（如 Xray、Zephyr），否则步骤会合并在描述中 |
+| 优先级不匹配 | Jira 默认优先级为 Highest/High/Medium/Low/Minor，CSV 中 High/Medium/Low 可直接映射 |
+| 字段映射失败 | 导入时手动将 CSV 列映射到对应的 Jira 字段 |
+
+### Jira 插件兼容性
+
+| 插件 | 支持程度 | 说明 |
+|------|----------|------|
+| Xray | 完全支持 | 原生支持 Test Steps 导入，字段可直接映射 |
+| Zephyr Scale | 完全支持 | 支持 CSV 导入测试用例和步骤 |
+| Jira 原生 | 部分支持 | 无 Test Steps 概念，步骤内容需合并到描述字段 |
 
 ---
 
@@ -222,9 +348,9 @@ python3 .testcase-assets/scripts/export_xmind.py <input.json> <output.xmind>
 
 > **注意**：导入前请确认 `project.config.md` 中「OTP 字段映射配置」全部勾选，字段名称与目标 OTP 系统完全一致。
 
-1. 运行流程至阶段 5，选择「Y」生成 JSON 文件
+1. 运行流程至阶段 5，选择「O」生成 JSON 文件
 2. 建议先用 **1~2 条用例**测试导入，确认字段映射正确后再批量导入
-3. 登录 OTP 系统，选择「导入测试用例」，上传 `otp_export_xxx.json`
+3. 登录 OTP 系统，选择「导入测试用例」，上传 `otp_export.json`
 4. 导入后如有字段不符，在对话中告知 AI 调整映射关系后重新生成
 
 ---

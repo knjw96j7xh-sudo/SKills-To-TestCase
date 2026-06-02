@@ -1,6 +1,13 @@
 ---
-description: 基于检查点/评审点资产，按标准五阶段流程生成测试用例，支持评审迭代与 OTP 导出
+name: "source-command-testcase-creator"
+description: "基于检查点/评审点资产，按标准五阶段流程生成测试用例，支持评审迭代与 OTP 导出"
 ---
+
+# source-command-testcase-creator
+
+Use this skill when the user asks to run the migrated source command `testcase-creator`.
+
+## Command Template
 
 # 用例生成 Skill — testcase-creator
 

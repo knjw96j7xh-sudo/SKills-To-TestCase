@@ -107,7 +107,7 @@
 ```
 
 > [!NOTE]
-> 手动将此内容保存为 `.testcase-assets/history/0-用例准备_YYYYMMDD_HHMMSS.md`
+> 手动将此内容保存为 `.testcase-assets/history/<YYYYMMDD>_<HHMMSS>_<模块名>/0-用例准备.md`
 
 ---
 
@@ -131,7 +131,7 @@
 ```
 
 > [!NOTE]
-> 手动将此内容保存为 `.testcase-assets/history/1-评审记要_YYYYMMDD_HHMMSS.md`
+> 手动将此内容保存为 `.testcase-assets/history/<YYYYMMDD>_<HHMMSS>_<模块名>/1-评审记要.md`
 
 ---
 
@@ -164,26 +164,24 @@
 
 ---
 
-### 阶段 5：定稿导入
+### 阶段 5：定稿导出
 
-输出完整最终用例表，询问是否生成 OTP JSON：
+输出完整最终用例表，询问导出平台（可多选）：
 
 ```
-[阶段 5 - 定稿导入]
+[阶段 5 - 定稿导出]
 用例定稿已完成，共 X 条。
 
-1. 是否需要生成 OTP 导入文件？
-   Y. 生成 OTP 树形 JSON（我将按 otp-schema.json 结构输出）
-   N. 不需要，跳过
+请选择导出平台（可多选，逗号分隔）：
+  J. Jira CSV（.csv，可直接导入 Jira）
+  O. OTP（树形 JSON，手动导入 OTP 系统）
+  E. Excel（.xlsx 表格，带颜色分类、冻结表头）
+  X. XMind（思维导图，用于用例展示和评审）
+  N. 不需要导出，本次到此结束
 
-2. 是否需要导出 Excel / XMind 格式？
-   > 注意：此步骤需要在有 Python + openpyxl 环境的机器上运行导出脚本，
-   > 纯对话工具只能生成中间 JSON 数据，由您手动执行脚本完成转换。
-   E. 需要 Excel — 我将输出 export_data.json 内容，您运行：
-      python3 .testcase-assets/scripts/export_excel.py export_data.json output.xlsx
-   X. 需要 XMind — 同上，运行：
-      python3 .testcase-assets/scripts/export_xmind.py export_data.json output.xmind
-   N. 不需要
+> 注意：Excel/XMind 导出需要在有 Python + openpyxl 环境的机器上运行导出脚本，
+> 纯对话工具只能生成中间 JSON 数据，由您手动执行脚本完成转换。
+> Jira CSV 和 OTP JSON 可直接由 AI 生成。
 
 [流程结束摘要]
 | 项目 | 详情 |
@@ -192,13 +190,19 @@
 | 用例总数 | X 条（正向X / 异常X / 边界X / 并发X） |
 | 关联检查点 | X 个 |
 | 评审轮次 | X 轮 |
+| 运行目录 | .testcase-assets/history/<运行目录>/ |
 
 是否有新的检查点或评审点需要沉淀？回复「沉淀」继续。
 ```
 
 > [!NOTE]
-> 手动将定稿内容保存为 `.testcase-assets/history/2-用例定稿_YYYYMMDD_HHMMSS.md`
-> 若生成了 OTP JSON，手动保存为 `otp_export_YYYYMMDD_HHMMSS.json` 并导入系统
+> 手动将定稿内容保存为 `.testcase-assets/history/<YYYYMMDD>_<HHMMSS>_<模块名>/2-用例定稿.md`
+> 若生成了 OTP JSON，保存为同目录下的 `otp_export.json`
+> 若生成了 Jira CSV，保存为同目录下的 `jira_export.csv`
+> Excel/XMind 导出脚本运行命令：
+>   python3 .testcase-assets/scripts/md_to_csv.py <运行目录>/2-用例定稿.md <运行目录>/jira_export.csv
+>   python3 .testcase-assets/scripts/export_excel.py <运行目录>/export_data.json <运行目录>/testcases.xlsx
+>   python3 .testcase-assets/scripts/export_xmind.py <运行目录>/export_data.json <运行目录>/testcases.xmind
 
 ---
 

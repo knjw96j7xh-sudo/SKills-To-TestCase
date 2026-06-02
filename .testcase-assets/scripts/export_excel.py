@@ -408,14 +408,47 @@ def apply_print_settings(ws, total_rows: int):
 # ─── 主函数 ────────────────────────────────────────────────────────────────────
 
 def export_excel(input_json: str, output_xlsx: str):
-    with open(input_json, encoding="utf-8") as f:
-        data = json.load(f)
+    import os
+
+    # 验证输入文件
+    if not os.path.exists(input_json):
+        print(f"[FAIL] 输入文件不存在: {input_json}")
+        sys.exit(1)
+
+    # 确保输出目录存在
+    output_dir = os.path.dirname(output_xlsx)
+    if output_dir and not os.path.exists(output_dir):
+        try:
+            os.makedirs(output_dir)
+        except Exception as e:
+            print(f"[FAIL] 无法创建输出目录: {e}")
+            sys.exit(1)
+
+    try:
+        with open(input_json, encoding="utf-8") as f:
+            data = json.load(f)
+    except json.JSONDecodeError as e:
+        print(f"[FAIL] JSON 格式错误: {e}")
+        sys.exit(1)
+    except UnicodeDecodeError:
+        print(f"[FAIL] 文件编码错误，请确保为 UTF-8: {input_json}")
+        sys.exit(1)
+    except Exception as e:
+        print(f"[FAIL] 读取文件失败: {e}")
+        sys.exit(1)
 
     meta         = data.get("meta", {})
     project      = meta.get("project", "测试用例")
     module       = meta.get("module", "")
     generated_at = meta.get("generated_at", datetime.now().strftime("%Y-%m-%d"))
     testcases    = data.get("testcases", [])
+
+    if not isinstance(testcases, list):
+        print(f"[FAIL] JSON 中 testcases 字段必须是数组，当前类型: {type(testcases).__name__}")
+        sys.exit(1)
+
+    if not testcases:
+        print("[WARN] testcases 为空，将生成仅含标题的 Excel 文件")
 
     wb = Workbook()
 
@@ -451,14 +484,23 @@ def export_excel(input_json: str, output_xlsx: str):
     # 冻结前两行
     ws.freeze_panes = "A3"
     # 筛选器：覆盖完整数据区域（第2行列名 → 最后数据行）
-    ws.auto_filter.ref = f"A2:{get_column_letter(N_COLS)}{last_data_row}"
+    if last_data_row >= 2:
+        ws.auto_filter.ref = f"A2:{get_column_letter(N_COLS)}{last_data_row}"
     set_column_widths(ws)
     apply_print_settings(ws, current_row)
 
     # ── 统计 Sheet ────────────────────────────────────────────────────────────
     write_stat_sheet(wb, testcases)
 
-    wb.save(output_xlsx)
+    try:
+        wb.save(output_xlsx)
+    except PermissionError:
+        print(f"[FAIL] 无写入权限: {output_xlsx}")
+        sys.exit(1)
+    except Exception as e:
+        print(f"[FAIL] 写入 Excel 失败: {e}")
+        sys.exit(1)
+
     print(f"[OK] Excel 已生成：{output_xlsx}（共 {len(testcases)} 条用例）")
     print(f"     包含列：用例ID / 测试点 / 前置条件 / 操作步骤 / 预期结果")
     print(f"           关联检查点 / 场景类型 / 优先级 / 执行状态 / 编写人 / 执行人 / 备注")
