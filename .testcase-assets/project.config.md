@@ -29,6 +29,7 @@
 | FILE | 文件管理 | 上传、下载、预览、删除 |
 | RISK | 通用风险 | 并发、网络异常、权限越界 |
 | API | 接口层 | 参数校验、鉴权、幂等性 |
+| SUPPLY | 供应链协同 | 品牌方与供应商之间的任务下发、催报、数据联动 |
 
 > [!NOTE]
 > 新增业务域时，同步在 checkpoints-index.md 中新增对应分类，并在此表追加一行。
@@ -40,32 +41,7 @@
 | 用途 | 路径 |
 |------|------|
 | 用例定稿存放目录 | `.testcase-assets/history/` |
-| OTP 导入文件存放目录 | `.testcase-assets/history/` |
-| OTP 系统导入入口 | [填写 OTP 系统 URL 或操作路径] |
 | 用例评审文档共享目录 | [填写团队共享路径，如：飞书/乐享链接] |
-
----
-
-## OTP 字段映射配置
-
-> [!IMPORTANT]
-> 这是最容易导致导入失败的环节。请提前与 OTP 系统管理员确认以下字段名称，
-> 并同步更新 `.testcase-assets/templates/otp-schema.json`。
-
-| 本方案字段名 | OTP 系统实际字段名 | 是否已对齐 |
-|-------------|------------------|------------|
-| `project` | [填写 OTP 字段名] | [ ] |
-| `moduleName` | [填写 OTP 字段名] | [ ] |
-| `suiteName` | [填写 OTP 字段名] | [ ] |
-| `caseId` | [填写 OTP 字段名] | [ ] |
-| `title` | [填写 OTP 字段名] | [ ] |
-| `priority` | [填写 OTP 字段名，P0/P1/P2 or 高/中/低] | [ ] |
-| `preconditions` | [填写 OTP 字段名] | [ ] |
-| `steps[].action` | [填写 OTP 字段名] | [ ] |
-| `steps[].expected` | [填写 OTP 字段名] | [ ] |
-| `tags` | [填写 OTP 字段名，或填「不支持」] | [ ] |
-
-> 全部勾选后，在 otp-schema.json 中统一替换字段名，再进行首次导入测试。
 
 ---
 

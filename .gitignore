@@ -17,5 +17,4 @@ __pycache__/
 # 临时导出文件（放在项目根目录时）
 /testcases_*.xlsx
 /testcases_*.xmind
-/otp_export_*.json
 /export_data_*.json

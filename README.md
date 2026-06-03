@@ -32,7 +32,6 @@
 │   ├── review-expectations-index.md  # 评审点索引（UX / DATA / COMP / EXEC / BUG / SEC）
 │   ├── templates/
 │   │   ├── testcase-table.md         # 用例表输出模板
-│   │   ├── otp-schema.json           # OTP 树形 JSON 结构示例
 │   │   ├── csv-schema.json           # Jira CSV 字段映射规则
 │   │   └── jira-csv-template.csv     # Jira CSV 示例文件
 │   ├── scripts/
@@ -47,7 +46,6 @@
 │           ├── 1-评审记要.md
 │           ├── 2-用例定稿.md
 │           ├── jira_export.csv       # Jira CSV 导出（可选）
-│           ├── otp_export.json       # OTP JSON 导出（可选）
 │           ├── export_data.json      # Excel/XMind 中间数据（可选）
 │           ├── testcases.xlsx        # Excel 导出（可选）
 │           └── testcases.xmind       # XMind 导出（可选）
@@ -118,7 +116,6 @@
 | 选项 | 格式 | 说明 |
 |------|------|------|
 | **J** | Jira CSV (`.csv`) | 可直接导入 Jira，UTF-8 with BOM 编码 |
-| **O** | OTP JSON (`.json`) | 树形结构，手动导入 OTP 系统 |
 | **E** | Excel (`.xlsx`) | 带场景颜色、冻结表头、优先级、统计 Sheet |
 | **X** | XMind (`.xmind`) | 四级结构（检查点 → 场景类型 → 用例 → 步骤） |
 
@@ -247,8 +244,7 @@ python3 .testcase-assets/scripts/export_xmind.py <input.json> <output.xmind>
 │   ├── 0-用例准备.md
 │   ├── 1-评审记要.md
 │   ├── 2-用例定稿.md
-│   ├── jira_export.csv
-│   └── otp_export.json
+│   └── jira_export.csv
 └── 20260615_090000_用户中心/                 # 第 2 次运行
     └── ...
 ```
@@ -276,7 +272,6 @@ python3 .testcase-assets/scripts/export_xmind.py <input.json> <output.xmind>
 | `1-评审记要.md` | 阶段 3/4 输出：用例表 + 评审记录 |
 | `2-用例定稿.md` | 阶段 5 输出：最终定稿用例表 |
 | `jira_export.csv` | Jira CSV 导出（若选 J） |
-| `otp_export.json` | OTP JSON 导出（若选 O） |
 | `export_data.json` | Excel/XMind 中间数据（若选 E/X） |
 | `testcases.xlsx` | Excel 导出（若选 E） |
 | `testcases.xmind` | XMind 导出（若选 X） |
@@ -341,17 +336,6 @@ python3 .testcase-assets/scripts/export_xmind.py <input.json> <output.xmind>
 | Xray | 完全支持 | 原生支持 Test Steps 导入，字段可直接映射 |
 | Zephyr Scale | 完全支持 | 支持 CSV 导入测试用例和步骤 |
 | Jira 原生 | 部分支持 | 无 Test Steps 概念，步骤内容需合并到描述字段 |
-
----
-
-## OTP 导入说明
-
-> **注意**：导入前请确认 `project.config.md` 中「OTP 字段映射配置」全部勾选，字段名称与目标 OTP 系统完全一致。
-
-1. 运行流程至阶段 5，选择「O」生成 JSON 文件
-2. 建议先用 **1~2 条用例**测试导入，确认字段映射正确后再批量导入
-3. 登录 OTP 系统，选择「导入测试用例」，上传 `otp_export.json`
-4. 导入后如有字段不符，在对话中告知 AI 调整映射关系后重新生成
 
 ---
 

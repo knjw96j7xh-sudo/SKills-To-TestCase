@@ -114,7 +114,6 @@ $Assets = @(
     @{ S = ".testcase-assets\checkpoints-index.md";        D = ".testcase-assets\checkpoints-index.md" },
     @{ S = ".testcase-assets\review-expectations-index.md"; D = ".testcase-assets\review-expectations-index.md" },
     @{ S = ".testcase-assets\templates\testcase-table.md";  D = ".testcase-assets\templates\testcase-table.md" },
-    @{ S = ".testcase-assets\templates\otp-schema.json";    D = ".testcase-assets\templates\otp-schema.json" },
     @{ S = ".testcase-assets\templates\csv-schema.json";    D = ".testcase-assets\templates\csv-schema.json" },
     @{ S = ".testcase-assets\templates\jira-csv-template.csv"; D = ".testcase-assets\templates\jira-csv-template.csv" },
     @{ S = ".testcase-assets\project.config.md";            D = ".testcase-assets\project.config.md" }
@@ -262,7 +261,6 @@ Write-Host "       +-- checkpoints-index.md"
 Write-Host "       +-- review-expectations-index.md"
 Write-Host "       +-- templates\"
 Write-Host "       |   +-- testcase-table.md"
-Write-Host "       |   +-- otp-schema.json"
 Write-Host "       |   +-- csv-schema.json"
 Write-Host "       |   +-- jira-csv-template.csv"
 Write-Host "       +-- scripts\"

@@ -1,5 +1,5 @@
 ---
-description: 独立导出命令，从已定稿的用例文件导出为 Jira CSV / OTP / Excel / XMind 格式
+description: 独立导出命令，从已定稿的用例文件导出为 Jira CSV / Excel / XMind 格式
 ---
 
 # 用例导出 Skill — testcase-export
@@ -36,7 +36,6 @@ description: 独立导出命令，从已定稿的用例文件导出为 Jira CSV 
 【选择导出平台】
 请选择导出平台（可多选，逗号分隔）：
   J. Jira CSV（.csv，可直接导入 Jira）
-  O. OTP（树形 JSON，手动导入 OTP 系统）
   E. Excel（.xlsx 表格，带颜色分类、冻结表头）
   X. XMind（思维导图，用于用例展示和评审）
   N. 取消
@@ -60,15 +59,7 @@ description: 独立导出命令，从已定稿的用例文件导出为 Jira CSV 
 - 编码：UTF-8 with BOM
 - 提示：`[EXPORT] Jira CSV 已生成，请手动导入 Jira 系统。`
 
-### 3b. OTP 导出（若选 O）
-
-- 询问：`请提供 OTP 项目名称和模块名称：`
-- 读取定稿文件中的用例数据
-- 按 `.testcase-assets/templates/otp-schema.json` 的结构生成 JSON
-- 输出文件 `.testcase-assets/history/<选定目录>/otp_export.json` 并展示内容预览
-- 提示：`[EXPORT] 请手动将此文件导入 OTP 系统。`
-
-### 3c. Excel / XMind 导出（若选 E 或 X）
+### 3b. Excel / XMind 导出（若选 E 或 X）
 
 **步骤 A — 序列化用例数据**：将定稿用例以如下 JSON 格式写入中间文件 `.testcase-assets/history/<选定目录>/export_data.json`：
 
@@ -119,7 +110,6 @@ description: 独立导出命令，从已定稿的用例文件导出为 Jira CSV 
 [OK] 文件已生成：
 
   Jira CSV → .testcase-assets/history/<选定目录>/jira_export.csv
-  OTP JSON → .testcase-assets/history/<选定目录>/otp_export.json（如已生成）
   Excel    → .testcase-assets/history/<选定目录>/testcases.xlsx（如已生成）
   XMind    → .testcase-assets/history/<选定目录>/testcases.xmind（如已生成）
 

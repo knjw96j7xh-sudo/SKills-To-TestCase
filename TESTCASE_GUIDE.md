@@ -174,14 +174,13 @@
 
 请选择导出平台（可多选，逗号分隔）：
   J. Jira CSV（.csv，可直接导入 Jira）
-  O. OTP（树形 JSON，手动导入 OTP 系统）
   E. Excel（.xlsx 表格，带颜色分类、冻结表头）
   X. XMind（思维导图，用于用例展示和评审）
   N. 不需要导出，本次到此结束
 
 > 注意：Excel/XMind 导出需要在有 Python + openpyxl 环境的机器上运行导出脚本，
 > 纯对话工具只能生成中间 JSON 数据，由您手动执行脚本完成转换。
-> Jira CSV 和 OTP JSON 可直接由 AI 生成。
+> Jira CSV 可直接由 AI 生成。
 
 [流程结束摘要]
 | 项目 | 详情 |
@@ -197,7 +196,6 @@
 
 > [!NOTE]
 > 手动将定稿内容保存为 `.testcase-assets/history/<YYYYMMDD>_<HHMMSS>_<模块名>/2-用例定稿.md`
-> 若生成了 OTP JSON，保存为同目录下的 `otp_export.json`
 > 若生成了 Jira CSV，保存为同目录下的 `jira_export.csv`
 > Excel/XMind 导出脚本运行命令：
 >   python3 .testcase-assets/scripts/md_to_csv.py <运行目录>/2-用例定稿.md <运行目录>/jira_export.csv
@@ -221,47 +219,6 @@
 > [!NOTE]
 > 手动将上述内容追加到对应的 `.testcase-assets/checkpoints-index.md` 或
 > `.testcase-assets/review-expectations-index.md` 文件末尾对应分类下。
-
----
-
-## OTP JSON 输出格式
-
-生成 OTP JSON 时，严格按以下结构输出（字段名以 project.config.md 中「OTP 字段映射配置」为准）：
-
-```json
-{
-  "project": "项目名称",
-  "version": "v1.0",
-  "exportTime": "YYYY-MM-DD HH:mm:ss",
-  "modules": [
-    {
-      "moduleName": "模块名称",
-      "suites": [
-        {
-          "suiteName": "套件名称",
-          "testCases": [
-            {
-              "caseId": "TC-001",
-              "title": "用例标题",
-              "priority": "P0",
-              "type": "正向",
-              "preconditions": "前置条件",
-              "steps": [
-                { "stepNo": 1, "action": "操作", "expected": "预期结果" }
-              ],
-              "relatedCheckpoints": ["UC-01"],
-              "relatedReviewPoints": ["UX-01"]
-            }
-          ]
-        }
-      ]
-    }
-  ]
-}
-```
-
-> [!IMPORTANT]
-> 首次使用前，请先用 1~2 条用例测试导入是否成功，再批量导入，避免格式问题导致大批量返工。
 
 ---
 

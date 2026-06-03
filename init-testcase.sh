@@ -155,11 +155,6 @@ copy_with_force \
   ".testcase-assets/templates/testcase-table.md"
 
 copy_with_force \
-  "${SCRIPT_DIR}/.testcase-assets/templates/otp-schema.json" \
-  "${TARGET_DIR}/.testcase-assets/templates/otp-schema.json" \
-  ".testcase-assets/templates/otp-schema.json"
-
-copy_with_force \
   "${SCRIPT_DIR}/.testcase-assets/templates/csv-schema.json" \
   "${TARGET_DIR}/.testcase-assets/templates/csv-schema.json" \
   ".testcase-assets/templates/csv-schema.json"
@@ -287,7 +282,6 @@ echo -e "       ├── checkpoints-index.md"
 echo -e "       ├── review-expectations-index.md"
 echo -e "       ├── templates/"
 echo -e "       │   ├── testcase-table.md"
-echo -e "       │   ├── otp-schema.json"
 echo -e "       │   ├── csv-schema.json"
 echo -e "       │   └── jira-csv-template.csv"
 echo -e "       ├── scripts/"
@@ -299,7 +293,7 @@ echo -e "           ├── history-index.md"
 echo -e "           └── .gitkeep"
 echo ""
 echo -e ">> 下一步："
-echo -e "   1. 【必填】编辑 ${GREEN}.testcase-assets/project.config.md${NC}，填写项目名称、业务域、OTP 字段映射"
+echo -e "   1. 【必填】编辑 ${GREEN}.testcase-assets/project.config.md${NC}，填写项目名称、业务域、默认导出路径"
 echo -e "   2. 【必填】根据实际业务补充 ${GREEN}.testcase-assets/checkpoints-index.md${NC}"
 echo -e "   3. 【环境】安装 Excel 导出依赖：${YELLOW}pip3 install openpyxl${NC}"
 echo -e "   4. 【环境】如需读取 PDF 文件：${YELLOW}brew install poppler${NC}  (可选)"

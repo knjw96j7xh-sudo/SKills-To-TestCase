@@ -20,7 +20,7 @@ All notable changes to this project will be documented in this file.
   - 新增 `.claude/commands/testcase-export.md`
   - 支持从已有定稿文件独立导出，无需重走 5 阶段用例生成流程
   - 自动扫描历史子目录或读取 `history-index.md` 列出可选文件
-  - 支持多平台导出：Jira CSV / OTP / Excel / XMind
+  - 支持多平台导出：Jira CSV / Excel / XMind
 
 - **历史记录管理**
   - 每次运行归入独立子目录：`.testcase-assets/history/<YYYYMMDD>_<HHMMSS>_<模块名>/`
@@ -30,8 +30,8 @@ All notable changes to this project will be documented in this file.
 ### Changed
 
 - **阶段 5 导出流程重构**（`testcase-creator.md`）
-  - 原流程：先问 OTP（Y/N），再问 Excel/XMind（E/X/N），两步分开
-  - 新流程：统一展示所有导出平台（J/O/E/X/N），一次选择，可多选
+  - 原流程：Excel/XMind 单独询问，导出入口分散
+  - 新流程：统一展示所有导出平台（J/E/X/N），一次选择，可多选
   - 新增 Jira CSV 作为首选导出选项
 
 - **文件目录结构重构**
@@ -80,10 +80,6 @@ All notable changes to this project will be documented in this file.
   - 检查点索引（checkpoints-index.md）：按业务域分类管理检查点
   - 评审点索引（review-expectations-index.md）：多维度评审覆盖检查
   - 资产沉淀：支持新增检查点和评审点，自动编号去重
-
-- **OTP 导出**
-  - 支持导出 OTP 树形 JSON 格式
-  - 模板：`.testcase-assets/templates/otp-schema.json`
 
 - **Excel / XMind 导出**
   - 支持导出 Excel（.xlsx）带颜色分类、冻结表头

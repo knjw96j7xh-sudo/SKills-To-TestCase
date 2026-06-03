@@ -1,5 +1,5 @@
 ---
-description: 基于检查点/评审点资产，按标准五阶段流程生成测试用例，支持评审迭代与 OTP 导出
+description: 基于检查点/评审点资产，按标准五阶段流程生成测试用例，支持评审迭代与多格式导出
 ---
 
 # 用例生成 Skill — testcase-creator
@@ -17,7 +17,6 @@ description: 基于检查点/评审点资产，按标准五阶段流程生成测
 3. 读取 `.testcase-assets/project.config.md`（若存在），从中载入以下上下文，后续流程无需再次询问：
    - 项目名称、项目英文标识（用于文件命名）
    - 业务域列表（用于检查点分类匹配）
-   - OTP 字段映射配置（生成 JSON 时替换字段名）
    - 默认优先级规则、评审默认应用维度
 4. **配置校验**：检查 `project.config.md` 是否仍包含占位符（如 `[填写项目中文名]`、`[填写英文缩写]`）。若检测到占位符，输出警告：
    ```
@@ -220,7 +219,6 @@ description: 基于检查点/评审点资产，按标准五阶段流程生成测
 
 请选择导出平台（可多选，逗号分隔）：
   J. Jira CSV（.csv，可直接导入 Jira）
-  O. OTP（树形 JSON，手动导入 OTP 系统）
   E. Excel（.xlsx 表格，带颜色分类、冻结表头）
   X. XMind（思维导图，用于用例展示和评审）
   N. 不需要导出，本次到此结束
@@ -237,14 +235,7 @@ description: 基于检查点/评审点资产，按标准五阶段流程生成测
 - 优先级映射：P0→High, P1→Medium, P2→Low
 - 提示：`[EXPORT] Jira CSV 已生成，请手动导入 Jira 系统。`
 
-### 3b. OTP 导出（若选 O）
-
-- 询问：`请提供 OTP 项目名称和模块名称：`
-- 按 `.testcase-assets/templates/otp-schema.json` 的结构生成 JSON
-- 输出文件 `<运行目录>/otp_export.json` 并展示内容预览
-- 提示：`[EXPORT] 请手动将此文件导入 OTP 系统。导入后如有问题，可告知我记录。`
-
-### 3c. Excel / XMind 导出（若选 E 或 X）
+### 3b. Excel / XMind 导出（若选 E 或 X）
 
 **步骤 A — 序列化用例数据**：将最终用例以如下 JSON 格式写入中间文件 `.testcase-assets/history/<运行目录>/export_data.json`：
 
@@ -274,7 +265,6 @@ description: 基于检查点/评审点资产，按标准五阶段流程生成测
 > - `steps`：换行分隔的字符串（`"1. 步骤一\n2. 步骤二"`），供 Excel/XMind 脚本按 `\n` 拆分各步骤。
 > - `priority`：从用例表「优先级」列直接取值（P0/P1/P2/P3）。
 > - `type` 字段值必须为以下之一：`正向` / `异常` / `边界` / `并发`。
-> - OTP 导出 JSON 的步骤格式为对象数组（`steps[].action`），与此处不同，两者独立生成，不要混用。
 
 **步骤 B — 调用导出脚本**（按所选格式分别执行）：
 
@@ -320,7 +310,6 @@ description: 基于检查点/评审点资产，按标准五阶段流程生成测
 | 运行目录 | .testcase-assets/history/<运行目录>/ |
 | 定稿文件 | 2-用例定稿.md |
 | Jira 导出 | jira_export.csv（如已生成） |
-| OTP 导出 | otp_export.json（如已生成） |
 | Excel 导出 | testcases.xlsx（如已生成） |
 | XMind 导出 | testcases.xmind（如已生成） |
 
