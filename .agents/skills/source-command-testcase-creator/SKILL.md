@@ -321,6 +321,7 @@ Use this skill when the user asks to run the migrated source command `testcase-c
 | XMind 导出 | testcases.xmind（如已生成） |
 
 [TIP] 是否有新的检查点或评审点需要沉淀？回复「沉淀」继续。
+[TOKEN] 本次会话结束时，请留意终端底部的 token 消耗统计。
 ```
 
 ---

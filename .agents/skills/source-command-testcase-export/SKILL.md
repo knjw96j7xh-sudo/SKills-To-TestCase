@@ -121,4 +121,5 @@ Use this skill when the user asks to run the migrated source command `testcase-e
   XMind    → .testcase-assets/history/<选定目录>/testcases.xmind（如已生成）
 
 [TIP] 可再次运行 /testcase-export 导出其他格式。
+[TOKEN] 本次会话结束时，请留意终端底部的 token 消耗统计。
 ```
