@@ -15,18 +15,20 @@ triggers:
 
 1. 检查 `.testcase-assets/checkpoints-index.md` 是否存在：
    - 存在 → 继续
-   - 不存在 → 提示用户："检查点索引文件缺失，请先执行 `/checkpoint-init` 创建默认资产，或手动放入 `.testcase-assets/` 目录。"，**中止流程**。
+   - 不存在 → 提示用户创建并**中止流程**。
 2. 检查 `.testcase-assets/review-expectations-index.md` 是否存在，同上。
 3. 读取 `.testcase-assets/project.config.md`（若存在），从中载入以下上下文，后续流程无需再次询问用户：
    - 项目名称、项目英文标识（用于文件命名）
    - 业务域列表（用于检查点分类匹配）
    - 常用导出路径
    - 默认优先级规则、评审默认应用维度
-4. **配置校验**：检查 `project.config.md` 是否仍包含占位符（如 `[填写项目中文名]`、`[填写英文缩写]`）。若检测到占位符，输出警告：
+4. **配置校验**：检查 `project.config.md` 是否仍包含占位符（如 `[填写项目中文名]`、`[填写英文缩写]`、`[填写姓名]`、`[填写团队共享路径]`）。若检测到占位符，输出警告：
    ```
    [WARN] project.config.md 中存在未填写的占位符，请先完善配置：
      - [填写项目中文名] → 请替换为实际项目名称
      - [填写英文缩写] → 请替换为实际英文标识
+     - [填写姓名] → 请替换为测试负责人姓名
+     - [填写团队共享路径] → 请替换为实际共享路径
    是否继续？(Y/N)
    ```
    用户确认继续则继续流程，否则中止。
@@ -279,7 +281,9 @@ triggers:
     .testcase-assets/history/<运行目录>/2-用例定稿.md \
     .testcase-assets/history/<运行目录>/jira_export.csv
   ```
-- 编码：UTF-8 with BOM
+- 编码：UTF-8 with BOM（确保 Jira 导入时中文不乱码）
+- 多步骤用例处理规则：首行填写 序号/标题/描述/优先级/需求/测试用例集，后续步骤行仅填写 步骤ID/步骤/测试数据/期望结果
+- 优先级映射：P0→High, P1→Medium, P2→Low, P3→Low
 - 提示：`[EXPORT] Jira CSV 已生成，请手动导入 Jira 系统。`
 
 ### 3b. Excel / XMind 导出（若选 E 或 X）

@@ -96,6 +96,10 @@ Copy-Asset "$ScriptDir\.cursor\skills\testcase-creator\skill.md" `
            "$TargetDir\.cursor\skills\testcase-creator\skill.md" `
            ".cursor\skills\testcase-creator\skill.md"
 
+Copy-Asset "$ScriptDir\.cursor\skills\testcase-export\skill.md" `
+           "$TargetDir\.cursor\skills\testcase-export\skill.md" `
+           ".cursor\skills\testcase-export\skill.md"
+
 # ---------- Claude Code 命令 ----------
 Write-Host ""
 Write-Info "-> 正在复制 Claude Code 命令..."

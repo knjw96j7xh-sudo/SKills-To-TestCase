@@ -121,6 +121,11 @@ copy_with_force \
   "${TARGET_DIR}/.cursor/skills/testcase-creator/skill.md" \
   ".cursor/skills/testcase-creator/skill.md"
 
+copy_with_force \
+  "${SCRIPT_DIR}/.cursor/skills/testcase-export/skill.md" \
+  "${TARGET_DIR}/.cursor/skills/testcase-export/skill.md" \
+  ".cursor/skills/testcase-export/skill.md"
+
 echo ""
 echo -e "${BLUE}-> 正在复制 Claude Code 命令...${NC}"
 copy_with_force \

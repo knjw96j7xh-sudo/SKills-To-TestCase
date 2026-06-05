@@ -10,8 +10,10 @@
 .
 ├── .cursor/
 │   └── skills/
-│       └── testcase-creator/
-│           └── skill.md              # Cursor 触发词：/testcase-creator
+│       ├── testcase-creator/
+│       │   └── skill.md              # Cursor 触发词：/testcase-creator
+│       └── testcase-export/
+│           └── skill.md              # Cursor 触发词：/testcase-export（独立导出）
 │
 ├── .claude/
 │   ├── commands/

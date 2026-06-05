@@ -15,8 +15,23 @@ All notable changes to this project will be documented in this file.
   - 新增 H：需求管理工具链接（Jira / Tapd / 禅道）
   - 所有 3 个 skill 文件（agents / claude / cursor）同步更新
 
+- **Cursor 版 testcase-export skill**
+  - 新增 `.cursor/skills/testcase-export/skill.md`，Cursor 用户可使用 `/testcase-export` 独立导出
+  - init 脚本（sh / ps1）同步更新，自动复制到目标项目
+
 - **Token 消耗提示**
   - 全部 5 个 skill 文件（testcase-creator / testcase-export / cursor / agents）流程结束时增加 `[TOKEN]` 提示，提醒用户查看终端底部 token 统计
+
+### Fixed
+
+- **Cursor 版 testcase-creator 一致性修复**
+  - 移除不存在的 `/checkpoint-init` 命令引用
+  - 补充 Jira CSV 多步骤用例处理规则和优先级映射说明
+  - 占位符校验补充 `[填写姓名]` 和 `[填写团队共享路径]` 检查
+
+- **P3 优先级映射补充**
+  - `csv-schema.json` 新增 P3→Low 映射，避免导出时优先级丢失
+  - 所有 skill 文件的优先级映射说明同步更新
 
 ### Changed
 
