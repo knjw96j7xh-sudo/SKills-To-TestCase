@@ -19,6 +19,10 @@ All notable changes to this project will be documented in this file.
   - 新增 `.cursor/skills/testcase-export/skill.md`，Cursor 用户可使用 `/testcase-export` 独立导出
   - init 脚本（sh / ps1）同步更新，自动复制到目标项目
 
+- **TESTCASE_GUIDE.md 快速触发话术扩展**
+  - 新增 6 种触发场景：完整流程、仅评审、仅导出、追问补充、资产沉淀、快速生成
+  - 纯对话工具用户可直接复制对应话术启动不同场景
+
 - **Token 消耗提示**
   - 全部 5 个 skill 文件（testcase-creator / testcase-export / cursor / agents）流程结束时增加 `[TOKEN]` 提示，提醒用户查看终端底部 token 统计
 
