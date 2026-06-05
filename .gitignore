@@ -18,6 +18,3 @@ __pycache__/
 /testcases_*.xlsx
 /testcases_*.xmind
 /export_data_*.json
-
-# 培训资料（不纳入版本管理）
-*.pptx
