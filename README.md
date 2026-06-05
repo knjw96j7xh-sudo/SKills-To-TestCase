@@ -28,8 +28,8 @@
 │
 ├── .testcase-assets/                  # 项目级可复用资产（建议 Git 管理）
 │   ├── project.config.md             # 项目配置（首次使用前必填）
-│   ├── checkpoints-index.md          # 检查点索引（UC / PAY / LIST / FILE / RISK / API）
-│   ├── review-expectations-index.md  # 评审点索引（UX / DATA / COMP / EXEC / BUG / SEC）
+│   ├── checkpoints-index.md          # 检查点索引（UC / PAY / LIST / FILE / RISK / API / CARB / APPR / SUPPLY）
+│   ├── review-expectations-index.md  # 评审点索引（UX / DATA / COMP / EXEC / BUG / SEC / PERF）
 │   ├── templates/
 │   │   ├── testcase-table.md         # 用例表输出模板
 │   │   ├── csv-schema.json           # Jira CSV 字段映射规则
@@ -91,11 +91,15 @@
 ![用例生成 Skill 流程图](assets/testcase-skill-flow.png)
 
 ### 1. 需求输入
-支持四种来源：
+支持八种来源：
 - **A** 直接粘贴文字描述
 - **B** 乐享页面链接
 - **C** 接口文档链接或本地路径
 - **D** 本地文件（`.md` / `.docx` / `.pdf`）
+- **E** 图片/截图（`.png` / `.jpg` / `.jpeg` / `.gif` / `.webp`）— UI 设计稿、原型图、流程图
+- **F** 飞书文档链接（`feishu.cn` / `larksuite.com`）
+- **G** Excel 需求列表（`.xlsx` / `.xls`）
+- **H** 需求管理工具链接（Jira / Tapd / 禅道）
 
 提取测试对象、业务规则、限制条件，输出确认清单。确认后创建运行子目录。
 
@@ -339,4 +343,4 @@ python3 .testcase-assets/scripts/export_xmind.py <input.json> <output.xmind>
 
 ---
 
-*由 testcase-creator skill 维护 · 最后更新：2026-06-02*
+*由 testcase-creator skill 维护 · 最后更新：2026-06-03*
