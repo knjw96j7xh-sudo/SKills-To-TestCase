@@ -8,6 +8,13 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
+- **阶段 1 需求来源扩展**
+  - 新增 E：图片/截图（.png/.jpg/.jpeg/.gif/.webp），支持 UI 设计稿、原型图、流程图识别
+  - 新增 F：飞书文档链接（feishu.cn / larksuite.com）
+  - 新增 G：Excel 需求列表（.xlsx/.xls），通过 openpyxl 解析
+  - 新增 H：需求管理工具链接（Jira / Tapd / 禅道）
+  - 所有 3 个 skill 文件（agents / claude / cursor）同步更新
+
 - **Token 消耗提示**
   - 全部 5 个 skill 文件（testcase-creator / testcase-export / cursor / agents）流程结束时增加 `[TOKEN]` 提示，提醒用户查看终端底部 token 统计
 

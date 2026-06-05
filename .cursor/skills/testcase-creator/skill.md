@@ -53,15 +53,23 @@ triggers:
   B. 乐享页面链接（我将读取内容）
   C. 接口文档链接或本地接口文档文件路径
   D. 本地技术方案文件路径（.md / .docx / .pdf）
+  E. 图片/截图（.png / .jpg / .jpeg / .gif / .webp）
+  F. 飞书文档链接
+  G. Excel 需求列表（.xlsx / .xls）
+  H. 需求管理工具链接（Jira / Tapd / 禅道）
 
-请输入需求来源类型（A/B/C/D）并提供对应内容：
+请输入需求来源类型（A-H）并提供对应内容：
 ```
 
 **收到输入后执行：**
-- 若为 B/C/D 类型，读取对应链接或文件内容：
+- 若为 B/C/D/F/G/H 类型，读取对应链接或文件内容：
   - `.pdf`：`pdftotext '<路径>' -`（macOS/Linux/WSL）或 Windows 原生：`python3 -m pdfplumber --text '<路径>'`
   - `.docx`：`textutil -convert txt -stdout '<路径>'`（macOS）或 `python3 -c "import docx; d=docx.Document('<路径>'); print('\n'.join(p.text for p in d.paragraphs if p.text))"`（Windows，需 `pip install python-docx`）
   - `.md`：直接使用 Read 工具
+  - `.xlsx` / `.xls`：`python3 -c "import openpyxl; wb=openpyxl.load_workbook('<路径>'); [print('\t'.join(str(c.value or '') for c in row)) for ws in wb.worksheets for row in ws.iter_rows()]"`（需 `pip install openpyxl`）
+  - 图片（.png/.jpg/.jpeg/.gif/.webp）：使用 Read 工具直接读取，自动识别图片中的需求内容
+  - 飞书文档链接（`feishu.cn` / `larksuite.com`）：使用 WebFetch 工具读取
+  - 需求管理工具链接（Jira / Tapd / 禅道）：使用 WebFetch 工具读取；API 链接可使用 Bash + curl
 - 提取并输出以下结构：
 
 ```markdown

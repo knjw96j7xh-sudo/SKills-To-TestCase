@@ -51,11 +51,15 @@ description: 基于检查点/评审点资产，按标准五阶段流程生成测
   B. 乐享页面链接
   C. 接口文档链接或本地文件路径
   D. 本地技术方案文件路径（.md / .docx / .pdf）
+  E. 图片/截图（.png / .jpg / .jpeg / .gif / .webp）
+  F. 飞书文档链接
+  G. Excel 需求列表（.xlsx / .xls）
+  H. 需求管理工具链接（Jira / Tapd / 禅道）
 
-请输入类型（A/B/C/D）并提供对应内容：
+请输入类型（A-H）并提供对应内容：
 ```
 
-**选项 D 的文件读取规则**（按文件扩展名执行）：
+**文件读取规则**（按文件扩展名执行）：
 
 - `.pdf` 文件：**必须**使用 Bash 命令 `pdftotext '<文件路径>' -` 读取文本内容，**不得**直接用文件读取工具打开 PDF，以避免模型路由错误。
 - `.md` 文件：使用 `Read` 工具直接读取。
@@ -63,6 +67,10 @@ description: 基于检查点/评审点资产，按标准五阶段流程生成测
   - **macOS**：使用 Bash 命令 `textutil -convert txt -stdout '<文件路径>'`
   - **Windows**：使用 Bash 命令 `python3 -c "import docx; d=docx.Document('<文件路径>'); print('\n'.join(p.text for p in d.paragraphs if p.text))"`（需先 `pip install python-docx`）
   - 若不确定系统，优先尝试 macOS 方式，失败则切换 Windows 方式
+- `.xlsx` / `.xls` 文件：使用 Bash 命令 `python3 -c "import openpyxl; wb=openpyxl.load_workbook('<文件路径>'); [print('\t'.join(str(c.value or '') for c in row)) for ws in wb.worksheets for row in ws.iter_rows()]"`（需先 `pip install openpyxl`）
+- `.png` / `.jpg` / `.jpeg` / `.gif` / `.webp` 图片：使用 `Read` 工具直接读取，模型将自动识别图片中的需求内容（UI 设计稿、原型图、流程图等）。
+- 飞书文档链接（`feishu.cn` / `larksuite.com`）：使用 `WebFetch` 工具读取页面内容。
+- 需求管理工具链接（Jira / Tapd / 禅道）：使用 `WebFetch` 工具读取页面内容；若为 API 链接可使用 `Bash` + `curl` 获取。
 
 收到输入后，读取内容并提取需求要素，输出确认清单：
 
