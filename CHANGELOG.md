@@ -8,20 +8,6 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
-- **供应链协同检查点（SUPPLY）**
-  - `checkpoints-index.md` 新增 SUPPLY 业务域分类
-  - SUPPLY-01：组织碳待办任务叶子边界判断逻辑
-  - SUPPLY-02：绿证数据删除后需重新保存以确保一致性
-  - SUPPLY-03：批量操作混合状态（已完成/未完成）的过滤逻辑
-  - SUPPLY-04：多角色（品牌方/供应商）操作后跨角色状态联动
-  - `project.config.md` 业务域列表同步新增 SUPPLY
-
-- **评审点补充**
-  - UX-07：批量操作成功后有明确的 Toast 或状态反馈
-  - DATA-05：多角色操作后跨角色状态联动正确
-  - DATA-06：缓存数据在多标签页或多角色操作后有合理的失效策略
-  - EXEC-04：操作步骤中"查看"类表述需明确具体操作
-
 - **Token 消耗提示**
   - 全部 5 个 skill 文件（testcase-creator / testcase-export / cursor / agents）流程结束时增加 `[TOKEN]` 提示，提醒用户查看终端底部 token 统计
 
