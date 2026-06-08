@@ -29,6 +29,14 @@ All notable changes to this project will be documented in this file.
   - 合并报告包含：评审员 A 报告 + 评审员 B 报告 + 合并结论
   - 三个 skill 文件（agents / claude / cursor）同步更新
 
+- **TESTCASE_GUIDE 阶段 4 角色扮演双人评审**
+  - 纯对话工具无法启动 subagent，改用「评审员 A（严格派）+ 评审员 B（实用派）」角色扮演模式
+  - 两轮评审后合并结论，共识项直接采纳，分歧项标记待确认
+
+- **占位符校验强制阻断**
+  - 检测到 `[填写` 开头的占位符时直接中止流程，不再提供「是否继续」选项
+  - 必须填写完整后才能进入阶段 1，避免生成无效用例
+
 - **Token 消耗提示**
   - 全部 5 个 skill 文件（testcase-creator / testcase-export / cursor / agents）流程结束时增加 `[TOKEN]` 提示，提醒用户查看终端底部 token 统计
 
