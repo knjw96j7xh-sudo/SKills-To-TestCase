@@ -208,7 +208,7 @@ bash init-testcase.sh .   # 用 . 表示当前目录（本仓库本身）
 | 编码 | UTF-8 with BOM（确保 Jira 导入时中文不乱码） |
 | 列 | 序号 / 标题 / 描述 / 优先级 / 步骤ID / 步骤 / 测试数据 / 期望结果 / 需求 / 测试用例集 |
 | 多步骤用例 | 首行填写用例基础信息，后续行仅填写步骤详情 |
-| 优先级映射 | P0→High, P1→Medium, P2→Low |
+| 优先级映射 | P0→High, P1→Medium, P2→Low, P3→Low |
 
 ### Excel（export_excel.py）
 

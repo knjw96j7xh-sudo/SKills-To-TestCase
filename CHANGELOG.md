@@ -48,6 +48,14 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 
+- **跨平台一致性全面修复**
+  - agents/claude export 文件补充多步骤用例处理规则和 P3→Low 优先级映射
+  - agents/claude creator 阶段1补充 Windows PDF 替代命令（pdfplumber）
+  - agents/claude creator 阶段0补充「常用导出路径」上下文字段
+  - cursor creator 阶段4步骤编号重复修复（两个"4."改为"4./5."）
+  - 三个 creator 文件评审后选项统一为 5 个（A-E），新增「仅接受共识项」选项
+  - README.md 优先级映射补充 P3→Low
+
 - **Cursor 版 testcase-creator 一致性修复**
   - 移除不存在的 `/checkpoint-init` 命令引用
   - 补充 Jira CSV 多步骤用例处理规则和优先级映射说明

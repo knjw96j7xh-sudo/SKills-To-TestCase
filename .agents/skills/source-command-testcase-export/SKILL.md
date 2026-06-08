@@ -63,7 +63,9 @@ Use this skill when the user asks to run the migrated source command `testcase-e
     .testcase-assets/history/<选定目录>/2-用例定稿.md \
     .testcase-assets/history/<选定目录>/jira_export.csv
   ```
-- 编码：UTF-8 with BOM
+- 编码：UTF-8 with BOM（确保 Jira 导入时中文不乱码）
+- 多步骤用例处理规则：首行填写 序号/标题/描述/优先级/需求/测试用例集，后续步骤行仅填写 步骤ID/步骤/测试数据/期望结果
+- 优先级映射：P0→High, P1→Medium, P2→Low, P3→Low
 - 提示：`[EXPORT] Jira CSV 已生成，请手动导入 Jira 系统。`
 
 ### 3b. Excel / XMind 导出（若选 E 或 X）

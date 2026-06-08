@@ -24,6 +24,7 @@ Use this skill when the user asks to run the migrated source command `testcase-c
 3. 读取 `.testcase-assets/project.config.md`（若存在），从中载入以下上下文，后续流程无需再次询问：
    - 项目名称、项目英文标识（用于文件命名）
    - 业务域列表（用于检查点分类匹配）
+   - 常用导出路径
    - 默认优先级规则、评审默认应用维度
 4. **配置校验（强制阻断）**：检查 `project.config.md` 是否包含 `[填写` 开头的占位符。若检测到任何占位符，**直接中止流程**，输出：
    ```
@@ -70,7 +71,7 @@ Use this skill when the user asks to run the migrated source command `testcase-c
 
 **文件读取规则**（按文件扩展名执行）：
 
-- `.pdf` 文件：**必须**使用 Bash 命令 `pdftotext '<文件路径>' -` 读取文本内容，**不得**直接用文件读取工具打开 PDF，以避免模型路由错误。
+- `.pdf` 文件：**必须**使用 Bash 命令 `pdftotext '<文件路径>' -` 读取文本内容，**不得**直接用文件读取工具打开 PDF，以避免模型路由错误。Windows 原生可使用 `python3 -m pdfplumber --text '<文件路径>'`。
 - `.md` 文件：使用 `Read` 工具直接读取。
 - `.docx` 文件（按操作系统选择）：
   - **macOS**：使用 Bash 命令 `textutil -convert txt -stdout '<文件路径>'`
@@ -245,12 +246,13 @@ Use this skill when the user asks to run the migrated source command `testcase-c
    - 合并结论（共识项 + 待确认项）
 
 4. 主 agent 展示合并后的评审报告，询问用户操作选项：
-   - **A**：接受所有补充建议 → 合并后重新输出完整用例表，可再次评审（支持多轮）
-   - **B**：部分接受（指定编号） → 同上
-   - **C**：手动修改 → 同上
-   - **D**：忽略，进入阶段 5
+   - **A**：接受所有补充（含待确认项） → 合并后重新输出完整用例表，可再次评审（支持多轮）
+   - **B**：仅接受共识项（忽略待确认项） → 同上
+   - **C**：部分接受（指定编号） → 同上
+   - **D**：手动修改 → 同上
+   - **E**：忽略，进入阶段 5
 
-4. 评审通过后将最终用例表追加记录到 `<运行目录>/1-评审记要.md`。
+5. 评审通过后将最终用例表追加记录到 `<运行目录>/1-评审记要.md`。
 
 ---
 
