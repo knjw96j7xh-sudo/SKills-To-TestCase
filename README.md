@@ -34,6 +34,7 @@
 │   ├── review-expectations-index.md  # 评审点索引（UX / DATA / COMP / EXEC / BUG / SEC / PERF）
 │   ├── templates/
 │   │   ├── testcase-table.md         # 用例表输出模板
+│   │   ├── testcase-table-config.json # 用例表列配置（8必填+6可选）
 │   │   ├── csv-schema.json           # Jira CSV 字段映射规则
 │   │   └── jira-csv-template.csv     # Jira CSV 示例文件
 │   ├── scripts/
@@ -82,7 +83,7 @@
 | 命令 | 平台 | 用途 |
 |------|------|------|
 | `/testcase-creator` | Claude Code / Cursor | 完整用例生成流程（5 阶段，含导出） |
-| `/testcase-export` | Claude Code | 独立导出（从已有定稿文件导出，无需重走流程） |
+| `/testcase-export` | Claude Code / Cursor | 独立导出（从已有定稿文件导出，无需重走流程） |
 | `source-command-testcase-creator` | Codex | 完整用例生成流程（5 阶段，含导出） |
 | `source-command-testcase-export` | Codex | 独立导出（从已有定稿文件导出，无需重走流程） |
 
@@ -109,12 +110,13 @@
 读取 `checkpoints-index.md`，展示所有分类和检查点，用户选择关联编号，生成结构化摘要写入 `0-用例准备.md`。
 
 ### 3. 用例生成
-基于需求要素 + 检查点，生成覆盖正向/异常/边界/并发四类的用例表，包含「优先级」列（P0–P3），写入 `1-评审记要.md`。
+读取 `testcase-table-config.json` 列配置，基于需求要素 + 检查点，生成覆盖正向/异常/边界/并发四类的用例表，包含「优先级」列（P0–P3），写入 `1-评审记要.md`。
 
 > 优先级规则：P0=异常场景（阻断性错误）/ P1=正向主流程/边界 / P2=并发 / P3=体验类
+> 列配置：默认 8 列，可通过 `testcase-table-config.json` 增加可选列（执行人/执行状态/自动化标记等）
 
-### 4. 评审优化
-读取 `review-expectations-index.md`，用户选择评审维度，AI 独立视角逐条判断覆盖情况，输出评审报告和补充建议，支持多轮迭代。
+### 4. 评审优化（双人 subagent 并行评审）
+读取 `review-expectations-index.md`，用户选择评审维度，启动 2 个隔离上下文的 subagent 独立评审，共识问题直接采纳，分歧问题标记「待确认」供用户判断，支持多轮迭代。
 
 ### 5. 定稿导出
 写入 `2-用例定稿.md`，然后统一选择导出平台（可多选）：
@@ -345,4 +347,4 @@ python3 .testcase-assets/scripts/export_xmind.py <input.json> <output.xmind>
 
 ---
 
-*由 testcase-creator skill 维护 · 最后更新：2026-06-03*
+*由 testcase-creator skill 维护 · 最后更新：2026-06-08*
