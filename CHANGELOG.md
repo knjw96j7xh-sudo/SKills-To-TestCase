@@ -23,6 +23,11 @@ All notable changes to this project will be documented in this file.
   - 新增 6 种触发场景：完整流程、仅评审、仅导出、追问补充、资产沉淀、快速生成
   - 纯对话工具用户可直接复制对应话术启动不同场景
 
+- **阶段 4 评审升级为 subagent 隔离上下文模式**
+  - 启动独立 subagent 执行评审，模拟「换一个人审」的多人评审效果
+  - subagent 以全新视角审查用例，不受生成时的确认偏误影响
+  - 评审报告由 subagent 独立写入，主 agent 展示结果供用户决策
+
 - **Token 消耗提示**
   - 全部 5 个 skill 文件（testcase-creator / testcase-export / cursor / agents）流程结束时增加 `[TOKEN]` 提示，提醒用户查看终端底部 token 统计
 
