@@ -37,6 +37,12 @@ All notable changes to this project will be documented in this file.
   - 检测到 `[填写` 开头的占位符时直接中止流程，不再提供「是否继续」选项
   - 必须填写完整后才能进入阶段 1，避免生成无效用例
 
+- **用例表模板配置化**
+  - 新增 `testcase-table-config.json` 列配置文件，定义 8 个必填列 + 6 个可选列
+  - 用户可通过编辑配置文件自定义列结构、顺序和格式
+  - 可选列：关联评审点 / 执行人 / 执行状态 / 备注 / 自动化标记 / 所属模块
+  - 三个 skill 文件同步更新，阶段 3 自动读取配置生成用例表
+
 - **Token 消耗提示**
   - 全部 5 个 skill 文件（testcase-creator / testcase-export / cursor / agents）流程结束时增加 `[TOKEN]` 提示，提醒用户查看终端底部 token 统计
 
