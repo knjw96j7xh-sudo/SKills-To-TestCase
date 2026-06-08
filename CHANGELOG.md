@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-## [1.2.0] - 2026-06-03
+## [1.3.0] - 2026-06-08
 
 ### Added
 
@@ -59,13 +59,39 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 
-- **.gitignore 更新**
-  - 新增 `*.pptx` 过滤规则，培训资料不纳入版本管理
-
 - **本地知识保留机制**
   - `checkpoints-index.md` 和 `review-expectations-index.md` 标记为 `--skip-worktree`
   - Git 远端保持初始模板版本，本地保留实际沉淀的检查点/评审点
   - 避免后续推送时覆盖个人积累的知识资产
+
+---
+
+## [1.1.1] - 2026-06-02
+
+### Fixed
+
+- **Critical 修复**
+  - `init-testcase.sh` 补充 v1.1.0 缺失文件：`testcase-export.md`、`md_to_csv.py`、`csv-schema.json`、`jira-csv-template.csv`、`history-index.md`
+  - `init-testcase.ps1` 同步补充 v1.1.0 缺失文件（与 sh 版本保持一致）
+  - `.gitkeep.md` 重命名为 `.gitkeep`，修复与 `.gitignore` 规则不匹配问题
+  - `.cursor/skills/testcase-creator/skill.md` 同步新目录结构（子目录命名 + Jira CSV 导出）
+  - `.claude/settings.local.json` 权限 glob 模式更新为 `history/*/` 匹配新目录结构
+  - `init-testcase.ps1` settings.local.json 模板更新为新目录 glob 模式
+
+- **High 修复**
+  - `md_to_csv.py` 优先级读取改为显式读取 MD 表格中的优先级列，不再依赖启发式推断
+  - 三个 Python 脚本（`export_excel.py`、`export_xmind.py`、`md_to_csv.py`）增加文件 I/O 错误处理（try/except）
+  - 脚本增加输入文件存在性校验、JSON 格式校验、编码校验
+  - 脚本增加 `testcases` 字段类型校验（必须为数组）
+
+- **Medium 修复**
+  - 初始化检查增加 `project.config.md` 占位符检测，未填写时警告用户
+  - 模块名清理：移除文件系统不允许的字符（`/ \ : * ? " < > |`）
+  - `md_to_csv.py` 步骤解析正则优化，减少误拆风险
+  - `md_to_csv.py` 解析失败时输出格式提示，不再静默生成空 CSV
+  - `TESTCASE_GUIDE.md` 文件命名更新为子目录结构
+  - `TESTCASE_GUIDE.md` 阶段 5 导出流程更新为统一 J/O/E/X/N 选择
+  - `README.md` 完善目录结构、可用命令、导出格式、历史记录管理等章节
 
 ---
 
@@ -103,35 +129,6 @@ All notable changes to this project will be documented in this file.
   - 原结构：`history/0-用例准备_<timestamp>.md`、`1-评审记要_<timestamp>.md` 平铺
   - 新结构：`history/<运行目录>/0-用例准备.md`、`1-评审记要.md` 归入子目录
   - 已有文件迁移至 `20260601_174203_碳盘查清单/` 子目录
-
----
-
-## [1.1.1] - 2026-06-02
-
-### Fixed
-
-- **Critical 修复**
-  - `init-testcase.sh` 补充 v1.1.0 缺失文件：`testcase-export.md`、`md_to_csv.py`、`csv-schema.json`、`jira-csv-template.csv`、`history-index.md`
-  - `init-testcase.ps1` 同步补充 v1.1.0 缺失文件（与 sh 版本保持一致）
-  - `.gitkeep.md` 重命名为 `.gitkeep`，修复与 `.gitignore` 规则不匹配问题
-  - `.cursor/skills/testcase-creator/skill.md` 同步新目录结构（子目录命名 + Jira CSV 导出）
-  - `.claude/settings.local.json` 权限 glob 模式更新为 `history/*/` 匹配新目录结构
-  - `init-testcase.ps1` settings.local.json 模板更新为新目录 glob 模式
-
-- **High 修复**
-  - `md_to_csv.py` 优先级读取改为显式读取 MD 表格中的优先级列，不再依赖启发式推断
-  - 三个 Python 脚本（`export_excel.py`、`export_xmind.py`、`md_to_csv.py`）增加文件 I/O 错误处理（try/except）
-  - 脚本增加输入文件存在性校验、JSON 格式校验、编码校验
-  - 脚本增加 `testcases` 字段类型校验（必须为数组）
-
-- **Medium 修复**
-  - 初始化检查增加 `project.config.md` 占位符检测，未填写时警告用户
-  - 模块名清理：移除文件系统不允许的字符（`/ \ : * ? " < > |`）
-  - `md_to_csv.py` 步骤解析正则优化，减少误拆风险
-  - `md_to_csv.py` 解析失败时输出格式提示，不再静默生成空 CSV
-  - `TESTCASE_GUIDE.md` 文件命名更新为子目录结构
-  - `TESTCASE_GUIDE.md` 阶段 5 导出流程更新为统一 J/O/E/X/N 选择
-  - `README.md` 完善目录结构、可用命令、导出格式、历史记录管理等章节
 
 ---
 
