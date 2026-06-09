@@ -1,3 +1,11 @@
+# 构建产物（自动生成）
+dist/
+
+# 项目资产（用户本地数据，不纳入版本控制）
+# 保留 _template 模板，忽略其他项目
+projects/*
+!projects/_template/
+
 # 历史记录目录（保留目录结构，不追踪用例文件）
 .testcase-assets/history/*
 !.testcase-assets/history/.gitkeep

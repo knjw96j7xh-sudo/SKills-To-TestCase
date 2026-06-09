@@ -1,0 +1,31 @@
+# 评审维度定义
+# 从 review-expectations-index.md 提取的通用框架，与业务无关
+
+dimensions:
+  - code: UX
+    name: "用户体验"
+    description: "交互流程、界面布局、提示信息"
+
+  - code: DATA
+    name: "数据一致性"
+    description: "数据校验、精度、同步"
+
+  - code: COMP
+    name: "完整性"
+    description: "场景覆盖、边界条件"
+
+  - code: EXEC
+    name: "可执行性"
+    description: "步骤清晰、预期可验证"
+
+  - code: BUG
+    name: "历史缺陷"
+    description: "已知问题回归"
+
+  - code: SEC
+    name: "安全"
+    description: "权限、注入、越权"
+
+  - code: PERF
+    name: "性能"
+    description: "响应时间、并发、大数据量"

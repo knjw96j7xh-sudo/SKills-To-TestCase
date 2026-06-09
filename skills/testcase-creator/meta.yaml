@@ -1,0 +1,32 @@
+name: testcase-creator
+description: "基于检查点/评审点资产，按标准五阶段流程生成测试用例，支持评审迭代与多平台导出（Jira CSV / Excel / XMind）"
+version: "1.4.0"
+
+platforms:
+  claude:
+    path: ".claude/commands/testcase-creator.md"
+    frontmatter:
+      description: "{{description}}"
+    body_from: prompt.md
+
+  cursor:
+    path: ".cursor/skills/testcase-creator/skill.md"
+    frontmatter:
+      name: "{{name}}"
+      description: "{{description}}"
+      triggers:
+        - "/testcase-creator"
+    body_from: prompt.md
+
+  agents:
+    path: ".agents/skills/source-command-testcase-creator/SKILL.md"
+    frontmatter:
+      name: "source-command-{{name}}"
+      description: "基于检查点/评审点资产，按标准五阶段流程生成测试用例，支持评审迭代与多格式导出"
+    body_from: prompt.md
+    prepend: |
+      # source-command-testcase-creator
+
+      Use this skill when the user asks to run the migrated source command `testcase-creator`.
+
+      ## Command Template

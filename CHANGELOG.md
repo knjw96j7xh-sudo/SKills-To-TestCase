@@ -4,6 +4,46 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.4.0] - 2026-06-09
+
+### Added
+
+- **统一源格式**
+  - 新增 `skills/` 目录，包含 `meta.yaml`（元数据+平台配置）和 `prompt.md`（唯一的内容源）
+  - 修改 prompt 只需改一个文件，构建自动生成三种平台格式
+  - 消除三套文件（Claude/Cursor/Agents）的重复维护
+
+- **多项目资产分离**
+  - 新增 `framework/` 目录，存放通用框架（templates / scripts / 维度定义）
+  - 新增 `projects/` 目录，按项目隔离资产（checkpoints / reviews / config）
+  - 支持 `_template` 模板，新项目只需复制模板并填写内容
+  - 已有项目：`crrc-esg`（中车ESG）、`carbon-audit`（碳盘查）
+
+- **构建脚本**
+  - 新增 `build.py`（Python 构建脚本），从统一源生成三种平台格式
+  - 新增 `build.sh`（Shell 包装脚本），调用 build.py
+  - 支持 `--clean` 参数清理 dist 目录
+
+- **安装脚本升级**
+  - `init-testcase.sh` 改版，支持指定项目名称：`./init-testcase.sh <项目名> <目标路径>`
+  - 自动从 `dist/` 复制 skill 文件
+  - 自动从 `framework/` 复制通用框架文件
+  - 自动从 `projects/<项目名>/` 复制项目资产
+  - 支持 `--force` 参数强制覆盖已有文件
+
+### Changed
+
+- **目录结构重构**
+  - 原 `.testcase-assets/` 拆分为 `framework/` + `projects/`
+  - 原 `.agents/`、`.cursor/`、`.claude/` 改为从 `dist/` 生成
+  - `dist/` 目录加入 `.gitignore`
+
+- **文档更新**
+  - `README.md` 更新目录结构和快速上手指南
+  - 新增多项目使用说明
+
+---
+
 ## [1.3.0] - 2026-06-08
 
 ### Added
@@ -64,6 +104,20 @@ All notable changes to this project will be documented in this file.
 - **P3 优先级映射补充**
   - `csv-schema.json` 新增 P3→Low 映射，避免导出时优先级丢失
   - 所有 skill 文件的优先级映射说明同步更新
+
+- **阶段 4 评审优化：评审报告独立存储 + 增量评审 + 并行分维度评审**
+  - 评审报告独立存储：每轮生成独立的 `1-评审报告-第N轮.md`（N=1,2,3...），`1-评审记要.md` 仅保留最终用例表
+  - 增量评审：第 2 轮起自动切换增量模式，已有用例仅展示 ID+测试点摘要，新增/修改用例展示完整信息，token 消耗预估减少 70%-80%
+  - 并行分维度评审：从 2 个通用 subagent 改为按维度（UX/DATA/COMP/EXEC/BUG/SEC/PERF）启动并行 subagent，每个 subagent 仅关注单维度评审点，审查深度更高
+  - 阶段 4 重构为 6 个子步骤（4.1 评审维度选择 / 4.2 评审范围确定 / 4.3 并行分维度评审 / 4.4 合并评审结果 / 4.5 文件输出 / 4.6 用户决策）
+  - 三个 skill 文件（agents / claude / cursor）同步更新，cursor 文件目录结构参考表同步更新
+
+- **全阶段 Token 消耗统计**
+  - 每个阶段（0~5）结束时记录终端累计 token 值作为阶段基线
+  - 阶段 4.5 每轮评审报告末尾追加 Token 统计区块（轮次/模式/维度数/用例数/消耗/累计）
+  - 阶段 5 最终汇总输出全阶段 Token 消耗对比表（各阶段增量 + 累计 + 占比）
+  - 支持评审轮次间 token 消耗对比，验证增量评审实际效果
+  - 三个 skill 文件同步更新
 
 ### Changed
 

@@ -1,7 +1,3 @@
----
-description: 独立导出命令，从已定稿的用例文件导出为 Jira CSV / Excel / XMind 格式
----
-
 # 用例导出 Skill — testcase-export
 
 > 从 `.testcase-assets/history/` 子目录中的定稿文件独立导出，无需重走用例生成流程。
@@ -56,7 +52,7 @@ description: 独立导出命令，从已定稿的用例文件导出为 Jira CSV 
     .testcase-assets/history/<选定目录>/2-用例定稿.md \
     .testcase-assets/history/<选定目录>/jira_export.csv
   ```
-- 编码：UTF-8 with BOM（确保 Jira 导入时中文不乱码）
+- 编码：UTF-8 with BOM
 - 多步骤用例处理规则：首行填写 序号/标题/描述/优先级/需求/测试用例集，后续步骤行仅填写 步骤ID/步骤/测试数据/期望结果
 - 优先级映射：P0→High, P1→Medium, P2→Low, P3→Low
 - 提示：`[EXPORT] Jira CSV 已生成，请手动导入 Jira 系统。`
@@ -87,6 +83,11 @@ description: 独立导出命令，从已定稿的用例文件导出为 Jira CSV 
 }
 ```
 
+> **格式说明**：
+> - `steps`：换行分隔的字符串（`"1. 步骤一\n2. 步骤二"`），供 Excel/XMind 脚本按 `\n` 拆分各步骤。
+> - `priority`：从用例表「优先级」列直接取值（P0/P1/P2/P3）。
+> - `type` 字段值必须为以下之一：`正向` / `异常` / `边界` / `并发`。
+
 **步骤 B — 调用导出脚本**：
 
 - 若选 **E**（Excel）：
@@ -102,6 +103,14 @@ description: 独立导出命令，从已定稿的用例文件导出为 Jira CSV 
     .testcase-assets/history/<选定目录>/export_data.json \
     .testcase-assets/history/<选定目录>/testcases.xmind
   ```
+
+**步骤 C — 确认输出**：脚本执行后，输出文件路径并提示用户：
+```
+[OK] 文件已生成：
+  Excel → .testcase-assets/history/<选定目录>/testcases.xlsx
+  XMind → .testcase-assets/history/<选定目录>/testcases.xmind
+[TIP] XMind 文件需 XMind 8 或更高版本打开。
+```
 
 ---
 

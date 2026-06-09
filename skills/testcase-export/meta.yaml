@@ -1,0 +1,32 @@
+name: testcase-export
+description: "独立导出命令，从已定稿的用例文件导出为 Jira CSV / Excel / XMind 格式"
+version: "1.4.0"
+
+platforms:
+  claude:
+    path: ".claude/commands/testcase-export.md"
+    frontmatter:
+      description: "{{description}}"
+    body_from: prompt.md
+
+  cursor:
+    path: ".cursor/skills/testcase-export/skill.md"
+    frontmatter:
+      name: "{{name}}"
+      description: "{{description}}"
+      triggers:
+        - "/testcase-export"
+    body_from: prompt.md
+
+  agents:
+    path: ".agents/skills/source-command-testcase-export/SKILL.md"
+    frontmatter:
+      name: "source-command-{{name}}"
+      description: "独立导出命令，从已定稿的用例文件导出为 Jira CSV / Excel / XMind 格式"
+    body_from: prompt.md
+    prepend: |
+      # source-command-testcase-export
+
+      Use this skill when the user wants to export finalized test cases to Jira CSV, Excel, or XMind.
+
+      ## Command Template
