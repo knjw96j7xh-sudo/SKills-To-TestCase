@@ -28,8 +28,6 @@ JSON 格式（由 Claude Code 生成）：
 
 import sys
 import json
-import re
-import ast
 from datetime import datetime
 from collections import defaultdict
 
@@ -37,14 +35,11 @@ from collections import defaultdict
 # --- 容错 JSON 加载 ----------------------------------------------------
 
 def load_json_robust(filepath: str) -> dict:
-    """加载 JSON 文件，兼容 LLM 常见格式错误。
+    """加载 JSON 文件，使用 json_repair 兼容 LLM 常见格式错误。
 
-    预处理：移除 BOM、注释（// 和 /* */）。
-    解析策略（按优先级）：
-      1. 严格 JSON
-      2. 去除尾逗号 + JSON
-      3. Python 字面量求值（处理单引号 / None / True / False）
-      4. 激进单引号→双引号替换
+    先尝试标准 json.load，失败后由 json_repair 自动修复：
+      单引号、尾逗号、None/True/False、BOM、注释、未转义引号、
+      未转义反斜杠、真实换行/Tab、数字前导零 等。
     """
     with open(filepath, "r", encoding="utf-8") as fh:
         raw = fh.read()
@@ -52,55 +47,27 @@ def load_json_robust(filepath: str) -> dict:
     if not raw.strip():
         raise ValueError(f"文件为空: {filepath}")
 
-    # 预处理：移除 BOM
-    raw = raw.lstrip("﻿")
-    # 预处理：移除行注释 //（不影响 https://）
-    raw = re.sub(r'(?<!:)(?<!:/)//.*$', '', raw, flags=re.MULTILINE)
-    # 预处理：移除块注释 /* ... */
-    raw = re.sub(r'/\*.*?\*/', '', raw, flags=re.DOTALL)
-
-    errors = []
-
-    # 策略 1：严格 JSON
+    # 快速路径：标准 JSON
     try:
         data = json.loads(raw)
         if isinstance(data, (dict, list)):
             return data if isinstance(data, dict) else {"testcases": data}
-    except json.JSONDecodeError as e:
-        errors.append(f"[strict JSON] {e}")
+    except json.JSONDecodeError:
+        pass
 
-    # 策略 2：去除尾逗号（LLM 常见错误：{"a": 1,} / [1,2,]）
-    no_trailing = re.sub(r",\s*([}\]])", r"\1", raw)
+    # 修复路径
     try:
-        data = json.loads(no_trailing)
-        if isinstance(data, (dict, list)):
-            return data if isinstance(data, dict) else {"testcases": data}
-    except json.JSONDecodeError as e:
-        errors.append(f"[comma fix] {e}")
+        from json_repair import repair_json
+    except ImportError:
+        raise ImportError(
+            "缺少 json_repair 库，请执行：pip3 install json-repair"
+        )
 
-    # 策略 3：Python 字面量（处理单引号字典 / None / True / False）
-    try:
-        data = ast.literal_eval(raw)
-        if isinstance(data, dict):
-            return data
-        if isinstance(data, list):
-            return {"testcases": data}
-    except (ValueError, SyntaxError) as e:
-        errors.append(f"[Python literal] {e}")
-
-    # 策略 4：激进单引号→双引号替换（最后手段，可能误伤内容中的引号）
-    aggressive = re.sub(r"'([^']*)'", r'"\1"', no_trailing)
-    try:
-        data = json.loads(aggressive)
-        if isinstance(data, (dict, list)):
-            return data if isinstance(data, dict) else {"testcases": data}
-    except json.JSONDecodeError as e:
-        errors.append(f"[quote fix] {e}")
-
-    raise ValueError(
-        f"无法解析 JSON 文件 {filepath}，所有策略均失败：\n"
-        + "\n".join(errors)
-    )
+    repaired = repair_json(raw)
+    data = json.loads(repaired)
+    if isinstance(data, (dict, list)):
+        return data if isinstance(data, dict) else {"testcases": data}
+    raise ValueError(f"修复后的 JSON 格式异常: {type(data).__name__}")
 
 try:
     from openpyxl import Workbook
