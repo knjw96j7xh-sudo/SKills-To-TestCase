@@ -28,8 +28,79 @@ JSON 格式（由 Claude Code 生成）：
 
 import sys
 import json
+import re
+import ast
 from datetime import datetime
 from collections import defaultdict
+
+
+# --- 容错 JSON 加载 ----------------------------------------------------
+
+def load_json_robust(filepath: str) -> dict:
+    """加载 JSON 文件，兼容 LLM 常见格式错误。
+
+    预处理：移除 BOM、注释（// 和 /* */）。
+    解析策略（按优先级）：
+      1. 严格 JSON
+      2. 去除尾逗号 + JSON
+      3. Python 字面量求值（处理单引号 / None / True / False）
+      4. 激进单引号→双引号替换
+    """
+    with open(filepath, "r", encoding="utf-8") as fh:
+        raw = fh.read()
+
+    if not raw.strip():
+        raise ValueError(f"文件为空: {filepath}")
+
+    # 预处理：移除 BOM
+    raw = raw.lstrip("﻿")
+    # 预处理：移除行注释 //（不影响 https://）
+    raw = re.sub(r'(?<!:)(?<!:/)//.*$', '', raw, flags=re.MULTILINE)
+    # 预处理：移除块注释 /* ... */
+    raw = re.sub(r'/\*.*?\*/', '', raw, flags=re.DOTALL)
+
+    errors = []
+
+    # 策略 1：严格 JSON
+    try:
+        data = json.loads(raw)
+        if isinstance(data, (dict, list)):
+            return data if isinstance(data, dict) else {"testcases": data}
+    except json.JSONDecodeError as e:
+        errors.append(f"[strict JSON] {e}")
+
+    # 策略 2：去除尾逗号（LLM 常见错误：{"a": 1,} / [1,2,]）
+    no_trailing = re.sub(r",\s*([}\]])", r"\1", raw)
+    try:
+        data = json.loads(no_trailing)
+        if isinstance(data, (dict, list)):
+            return data if isinstance(data, dict) else {"testcases": data}
+    except json.JSONDecodeError as e:
+        errors.append(f"[comma fix] {e}")
+
+    # 策略 3：Python 字面量（处理单引号字典 / None / True / False）
+    try:
+        data = ast.literal_eval(raw)
+        if isinstance(data, dict):
+            return data
+        if isinstance(data, list):
+            return {"testcases": data}
+    except (ValueError, SyntaxError) as e:
+        errors.append(f"[Python literal] {e}")
+
+    # 策略 4：激进单引号→双引号替换（最后手段，可能误伤内容中的引号）
+    aggressive = re.sub(r"'([^']*)'", r'"\1"', no_trailing)
+    try:
+        data = json.loads(aggressive)
+        if isinstance(data, (dict, list)):
+            return data if isinstance(data, dict) else {"testcases": data}
+    except json.JSONDecodeError as e:
+        errors.append(f"[quote fix] {e}")
+
+    raise ValueError(
+        f"无法解析 JSON 文件 {filepath}，所有策略均失败：\n"
+        + "\n".join(errors)
+    )
 
 try:
     from openpyxl import Workbook
@@ -425,10 +496,9 @@ def export_excel(input_json: str, output_xlsx: str):
             sys.exit(1)
 
     try:
-        with open(input_json, encoding="utf-8") as f:
-            data = json.load(f)
-    except json.JSONDecodeError as e:
-        print(f"[FAIL] JSON 格式错误: {e}")
+        data = load_json_robust(input_json)
+    except ValueError as e:
+        print(f"[FAIL] {e}")
         sys.exit(1)
     except UnicodeDecodeError:
         print(f"[FAIL] 文件编码错误，请确保为 UTF-8: {input_json}")
@@ -436,6 +506,13 @@ def export_excel(input_json: str, output_xlsx: str):
     except Exception as e:
         print(f"[FAIL] 读取文件失败: {e}")
         sys.exit(1)
+
+    # 自动修复：将解析成功的数据写回文件，确保磁盘上的 JSON 始终符合严格规范
+    try:
+        with open(input_json, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+    except (OSError, IOError):
+        pass  # 非致命：修复失败不影响本次导出
 
     meta         = data.get("meta", {})
     project      = meta.get("project", "测试用例")

@@ -4,6 +4,32 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.5.0] - 2026-06-11
+
+### Added
+
+- **JSON 格式自检机制**
+  - Skill Prompt 新增步骤 A2「强制自检 JSON 格式」，LLM 写入 `export_data.json` 后自动运行 `json.load()` 校验
+  - 校验失败时 LLM 读取错误信息，自行定位并修正格式问题，循环直到通过
+  - 涵盖 8 类常见错误：单引号、尾逗号、未转义双引号、Python 字面量、BOM、真实换行/Tab、未转义反斜杠、数字前导零
+
+- **导出脚本容错加载（`load_json_robust`）**
+  - `export_excel.py` 和 `export_xmind.py` 新增 4 层解析策略：严格 JSON → 去尾逗号 → Python 字面量 → 引号替换
+  - 预处理：自动移除 BOM 字符、`//` 行注释、`/* */` 块注释
+  - 加载成功后自动写回规范 JSON，确保磁盘文件始终符合严格格式
+
+- **Python 脚本 I/O 错误处理增强**
+  - `load_json_robust` 覆盖：单引号字典、尾逗号、`None`/`True`/`False`、BOM、注释、Tab 字符
+  - 所有策略均失败时输出详细错误追踪，便于定位问题
+
+### Changed
+
+- **JSON 格式校验由外部脚本改为 LLM 自检**
+  - 移除 `fix_json.py`（功能已内置到导出脚本的 `load_json_robust` 和 Prompt 的自检循环中）
+  - JSON 格式问题由 LLM 自行诊断修复，不再依赖独立工具
+
+---
+
 ## [1.4.0] - 2026-06-09
 
 ### Added

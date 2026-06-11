@@ -391,6 +391,27 @@
 }
 ```
 
+**步骤 A2 — 强制自检 JSON 格式**（必须执行，循环直到通过）：
+
+写入完成后，你必须亲自验证 JSON 格式无误。用以下命令检查：
+
+```bash
+python3 -c "import json; json.load(open('.testcase-assets/history/<运行目录>/export_data.json'))" && echo "[OK] JSON valid" || echo "[FAIL] JSON invalid"
+```
+
+- 若输出 `[FAIL] JSON invalid`：**你必须**读取错误信息，自行找出 JSON 中的格式问题（单引号、尾逗号、`None`/`True`/`False` 等），修正文件内容后重新写入，然后**再次运行上述命令**，直到输出 `[OK] JSON valid` 为止。
+- 若输出 `[OK] JSON valid`：继续下一步。
+
+> **常见错误自查清单**（按出现频率排序）：
+> 1. 字符串用了单引号 `'`（必须全部用双引号 `"`）
+> 2. 对象 `}` 或数组 `]` 前有多余逗号
+> 3. 中文文本中含未转义的双引号 `"`（须写成 `\"`）
+> 4. 误用了 Python 的 `None`、`True`、`False`（应为 `null`、`true`、`false`）
+> 5. 文件开头有 BOM 字符（保存时须选 "UTF-8 without BOM"）
+> 6. 字符串内包含未转义的真实换行或 Tab（须写成 `\n`、`\t`）
+> 7. 反斜杠未转义，如 Windows 路径 `C:\Users`（须写成 `C:\\Users`）
+> 8. 数字有前导零，如 `001`（应用引号包裹为 `"001"`）
+
 **步骤 B — 调用导出脚本**：
 
 - 若选 **E**（Excel）：
