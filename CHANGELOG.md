@@ -18,6 +18,7 @@ All notable changes to this project will be documented in this file.
   - 覆盖 12 类格式错误：单引号、尾逗号、`None`/`True`/`False`、BOM、注释、未转义双引号、未转义反斜杠、真实换行/Tab、数字前导零
   - 快速路径：标准 JSON 直接通过，无额外开销；非法 JSON 自动修复
   - 加载成功后自动写回规范 JSON，确保磁盘文件始终符合严格格式
+  - 依赖（`json-repair`、`openpyxl`）首次运行时自动安装，无需手动执行 pip install
 
 ### Changed
 

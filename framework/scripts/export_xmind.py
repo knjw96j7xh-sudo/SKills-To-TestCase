@@ -29,21 +29,38 @@ Sheet 2：统计总览
 
 import sys
 import json
+import subprocess
 import zipfile
 import uuid
 from datetime import datetime, timezone
 from collections import defaultdict
 
 
+# --- 依赖自动安装 ----------------------------------------------------
+
+def _ensure(package: str, import_name: str = None):
+    """自动安装缺失的 Python 依赖。"""
+    if import_name is None:
+        import_name = package.replace("-", "_")
+    try:
+        __import__(import_name)
+    except ImportError:
+        print(f"[INSTALL] 正在安装 {package} ...")
+        subprocess.check_call(
+            [sys.executable, "-m", "pip", "install", package, "-q"],
+            stdout=subprocess.DEVNULL,
+        )
+        print(f"[INSTALL] {package} 安装完成")
+
+
+_ensure("json-repair")
+from json_repair import repair_json
+
+
 # --- 容错 JSON 加载 ----------------------------------------------------
 
 def load_json_robust(filepath: str) -> dict:
-    """加载 JSON 文件，使用 json_repair 兼容 LLM 常见格式错误。
-
-    先尝试标准 json.load，失败后由 json_repair 自动修复：
-      单引号、尾逗号、None/True/False、BOM、注释、未转义引号、
-      未转义反斜杠、真实换行/Tab、数字前导零 等。
-    """
+    """加载 JSON 文件，使用 json_repair 兼容 LLM 常见格式错误。"""
     with open(filepath, "r", encoding="utf-8") as fh:
         raw = fh.read()
 
@@ -59,13 +76,6 @@ def load_json_robust(filepath: str) -> dict:
         pass
 
     # 修复路径
-    try:
-        from json_repair import repair_json
-    except ImportError:
-        raise ImportError(
-            "缺少 json_repair 库，请执行：pip3 install json-repair"
-        )
-
     repaired = repair_json(raw)
     data = json.loads(repaired)
     if isinstance(data, (dict, list)):

@@ -28,8 +28,45 @@ JSON 格式（由 Claude Code 生成）：
 
 import sys
 import json
+import subprocess
 from datetime import datetime
 from collections import defaultdict
+
+
+# --- 依赖自动安装 ----------------------------------------------------
+
+def _ensure(package: str, import_name: str = None):
+    """自动安装缺失的 Python 依赖。
+
+    Args:
+        package: pip 包名（如 "json-repair"）
+        import_name: import 名称（如 "json_repair"），默认用 package.replace("-", "_")
+    """
+    if import_name is None:
+        import_name = package.replace("-", "_")
+    try:
+        __import__(import_name)
+    except ImportError:
+        print(f"[INSTALL] 正在安装 {package} ...")
+        subprocess.check_call(
+            [sys.executable, "-m", "pip", "install", package, "-q"],
+            stdout=subprocess.DEVNULL,
+        )
+        print(f"[INSTALL] {package} 安装完成")
+
+
+# 自动安装依赖
+_ensure("json-repair")
+_ensure("openpyxl")
+
+from json_repair import repair_json
+from openpyxl import Workbook
+from openpyxl.styles import (
+    Font, PatternFill, Alignment, Border, Side,
+)
+from openpyxl.utils import get_column_letter
+from openpyxl.chart import BarChart, Reference
+from openpyxl.chart.label import DataLabelList
 
 
 # --- 容错 JSON 加载 ----------------------------------------------------
@@ -56,30 +93,11 @@ def load_json_robust(filepath: str) -> dict:
         pass
 
     # 修复路径
-    try:
-        from json_repair import repair_json
-    except ImportError:
-        raise ImportError(
-            "缺少 json_repair 库，请执行：pip3 install json-repair"
-        )
-
     repaired = repair_json(raw)
     data = json.loads(repaired)
     if isinstance(data, (dict, list)):
         return data if isinstance(data, dict) else {"testcases": data}
     raise ValueError(f"修复后的 JSON 格式异常: {type(data).__name__}")
-
-try:
-    from openpyxl import Workbook
-    from openpyxl.styles import (
-        Font, PatternFill, Alignment, Border, Side,
-    )
-    from openpyxl.utils import get_column_letter
-    from openpyxl.chart import BarChart, Reference
-    from openpyxl.chart.label import DataLabelList
-except ImportError:
-    print("[ERROR] 缺少 openpyxl，请执行：pip3 install openpyxl")
-    sys.exit(1)
 
 
 # ─── 颜色 & 样式常量 ───────────────────────────────────────────────────────────
