@@ -4,6 +4,29 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.6.0] - 2026-07-07
+
+### Added
+
+- **Excel 导出新增「所属模块」列（`export_excel.py`）**
+  - 列定义从 12 列扩展到 13 列，在「用例ID」后插入「所属模块」
+  - 自动读取 JSON 中 `module` 字段
+  - 便于测试人员按模块筛选、分配执行任务
+
+- **Excel「备注」列支持预填（`export_excel.py`）**
+  - 备注列从固定空白改为读取 JSON 中 `remark` 字段
+  - 支持在生成 JSON 时预填执行指引（如"需Chrome DevTools限速""需两个独立浏览器会话"）
+  - 无预填内容则留空，不影响常规用例
+
+### Changed
+
+- **`_template` 目录补全**
+  - 新增 `scripts/`，包含 `export_excel.py`、`export_xmind.py`、`md_to_csv.py`
+  - 新增 `templates/`，包含 `csv-schema.json`、`jira-csv-template.csv`、`testcase-table-config.json`、`testcase-table.md`
+  - 新项目初始化时自动从模板拷贝，保证脚本版本一致
+
+---
+
 ## [1.5.0] - 2026-06-11
 
 ### Added
