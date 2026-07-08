@@ -27,6 +27,7 @@ JSON 格式（由 Claude Code 生成）：
 """
 
 import sys
+import re
 import json
 import subprocess
 from datetime import datetime
@@ -515,6 +516,16 @@ def export_excel(input_json: str, output_xlsx: str):
     if not testcases:
         print("[WARN] testcases 为空，将生成仅含标题的 Excel 文件")
 
+    # 按用例ID排序（TC-001 < TC-001a < TC-002）
+    def _sort_key(tc):
+        tid = tc.get("id", "")
+        m = re.match(r'TC-(\d+)([a-z]*)', tid)
+        if m:
+            return (int(m.group(1)), m.group(2))
+        return (99999, tid)
+
+    testcases.sort(key=_sort_key)
+
     wb = Workbook()
 
     # ── 主表 Sheet ─────────────────────────────────────────────────────────────
@@ -526,23 +537,17 @@ def export_excel(input_json: str, output_xlsx: str):
     # 第2行：列名
     write_header_row(ws)
 
-    # 按场景类型分组排序
-    groups = defaultdict(list)
-    for tc in testcases:
-        groups[tc.get("type", "正向")].append(tc)
-
+    # 按用例ID全局排序后直接写入（保持类型颜色分组，但行顺序按ID）
     current_row = 3
-    for tc_type in TYPE_ORDER:
-        cases = groups.get(tc_type, [])
-        if not cases:
-            continue
-        # 用例行（不插额外标题行，筛选区域保持连续）
-        for idx, tc in enumerate(cases, start=1):
-            write_testcase_row(ws, current_row, tc, idx)
-            # 每组第一行加粗上边框作为视觉分隔
-            if idx == 1:
-                apply_group_separator(ws, current_row, tc_type)
-            current_row += 1
+    prev_type = None
+    for global_idx, tc in enumerate(testcases, start=1):
+        tc_type = tc.get("type", "正向")
+        write_testcase_row(ws, current_row, tc, global_idx)
+        # 场景类型切换时加粗上边框作为视觉分隔
+        if tc_type != prev_type:
+            apply_group_separator(ws, current_row, tc_type)
+            prev_type = tc_type
+        current_row += 1
 
     last_data_row = current_row - 1
 

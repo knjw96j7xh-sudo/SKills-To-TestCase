@@ -28,6 +28,7 @@ Sheet 2：统计总览
 """
 
 import sys
+import re
 import json
 import subprocess
 import zipfile
@@ -183,6 +184,16 @@ def build_testcase_sheet(data: dict) -> dict:
     module       = meta.get("module", "")
     generated_at = meta.get("generated_at", datetime.now().strftime("%Y-%m-%d"))
     testcases    = data.get("testcases", [])
+
+    # 按用例ID排序（TC-001 < TC-001a < TC-002）
+    def _sort_key(tc):
+        tid = tc.get("id", "")
+        m = re.match(r'TC-(\d+)([a-z]*)', tid)
+        if m:
+            return (int(m.group(1)), m.group(2))
+        return (99999, tid)
+
+    testcases.sort(key=_sort_key)
 
     # 第一层：按检查点分组
     cp_groups: dict[str, list] = defaultdict(list)
