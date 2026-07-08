@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.6.1] - 2026-07-08
+
+### Changed
+
+- **`export_excel.py` / `export_xmind.py` 自动按用例ID全局排序**
+  - 读取 JSON 后自动按 TC-XXX 编号升序排列（TC-001 < TC-001a < TC-002）
+  - Excel 行顺序改为全局排序，不再按场景类型分组打乱编号顺序
+  - 保留场景类型颜色区分和类型切换时的视觉分隔线
+
+---
+
 ## [1.6.0] - 2026-07-07
 
 ### Added
