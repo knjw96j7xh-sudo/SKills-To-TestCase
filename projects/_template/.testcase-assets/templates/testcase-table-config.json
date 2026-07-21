@@ -1,7 +1,6 @@
 {
   "_comment": "用例表列配置文件，定义用例表的列结构、顺序和格式",
   "_usage": "skill 文件读取此配置生成用例表，用户可自定义列",
-
   "columns": [
     {
       "field": "id",
@@ -58,7 +57,12 @@
       "editable": false,
       "description": "正向/异常/边界/并发",
       "width": "auto",
-      "enum": ["正向", "异常", "边界", "并发"]
+      "enum": [
+        "正向",
+        "异常",
+        "边界",
+        "并发"
+      ]
     },
     {
       "field": "priority",
@@ -67,10 +71,22 @@
       "editable": false,
       "description": "P0/P1/P2/P3",
       "width": "auto",
-      "enum": ["P0", "P1", "P2", "P3"]
+      "enum": [
+        "P0",
+        "P1",
+        "P2",
+        "P3"
+      ]
+    },
+    {
+      "field": "module",
+      "header": "所属模块",
+      "required": true,
+      "editable": true,
+      "description": "功能模块细分，多模块时自动填写",
+      "width": "auto"
     }
   ],
-
   "optional_columns": [
     {
       "field": "review_point",
@@ -95,7 +111,12 @@
       "editable": true,
       "description": "未执行/通过/失败/阻塞",
       "width": "auto",
-      "enum": ["未执行", "通过", "失败", "阻塞"]
+      "enum": [
+        "未执行",
+        "通过",
+        "失败",
+        "阻塞"
+      ]
     },
     {
       "field": "remark",
@@ -112,24 +133,29 @@
       "editable": true,
       "description": "是否适合自动化：是/否/待评估",
       "width": "auto",
-      "enum": ["是", "否", "待评估"]
-    },
-    {
-      "field": "module",
-      "header": "所属模块",
-      "required": false,
-      "editable": true,
-      "description": "功能模块细分",
-      "width": "auto"
+      "enum": [
+        "是",
+        "否",
+        "待评估"
+      ]
     }
   ],
-
   "settings": {
     "id_prefix": "TC",
     "id_digits": 3,
     "default_priority_rule": "P0=异常场景，P1=正向主流程/边界，P2=并发/低频边界，P3=体验类",
-    "scene_types": ["正向", "异常", "边界", "并发"],
-    "priority_levels": ["P0", "P1", "P2", "P3"],
+    "scene_types": [
+      "正向",
+      "异常",
+      "边界",
+      "并发"
+    ],
+    "priority_levels": [
+      "P0",
+      "P1",
+      "P2",
+      "P3"
+    ],
     "priority_colors": {
       "P0": "red",
       "P1": "orange",
@@ -137,27 +163,48 @@
       "P3": "gray"
     }
   },
-
   "metadata_section": {
     "enabled": true,
     "fields": [
-      {"field": "project", "label": "项目名称"},
-      {"field": "module", "label": "测试对象"},
-      {"field": "source", "label": "需求来源"},
-      {"field": "date", "label": "生成日期"},
-      {"field": "checkpoints", "label": "关联检查点"},
-      {"field": "review_points", "label": "关联评审点"}
+      {
+        "field": "project",
+        "label": "项目名称"
+      },
+      {
+        "field": "module",
+        "label": "测试对象"
+      },
+      {
+        "field": "source",
+        "label": "需求来源"
+      },
+      {
+        "field": "date",
+        "label": "生成日期"
+      },
+      {
+        "field": "checkpoints",
+        "label": "关联检查点"
+      },
+      {
+        "field": "review_points",
+        "label": "关联评审点"
+      }
     ]
   },
-
   "statistics_section": {
     "enabled": true,
     "group_by": "type",
     "show_percentage": true
   },
-
   "review_section": {
     "enabled": true,
-    "columns": ["评审轮次", "日期", "评审点", "覆盖状态", "处理结果"]
+    "columns": [
+      "评审轮次",
+      "日期",
+      "评审点",
+      "覆盖状态",
+      "处理结果"
+    ]
   }
 }
