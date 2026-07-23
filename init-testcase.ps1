@@ -80,51 +80,43 @@ function Copy-Asset {
     }
 }
 
+function Copy-TreeFiles {
+    param([string]$SourceRoot, [string]$DestinationRoot, [string]$LabelRoot)
+    Get-ChildItem -Path $SourceRoot -Recurse -File | ForEach-Object {
+        $Relative = $_.FullName.Substring($SourceRoot.Length).TrimStart('\', '/')
+        Copy-Asset $_.FullName (Join-Path $DestinationRoot $Relative) "$LabelRoot/$($Relative -replace '\\', '/')"
+    }
+}
+
+# ---------- 构建最新 Skill ----------
+Write-Info "-> 正在构建最新 Skill..."
+& python "$ScriptDir\build.py" --clean
+if ($LASTEXITCODE -ne 0) {
+    Write-Fail "Skill 构建失败"
+    exit $LASTEXITCODE
+}
+
 # ---------- Agent/Codex Skills ----------
 Write-Info "-> 正在复制 Agent/Codex Skills..."
-Copy-Asset "$ScriptDir\.agents\skills\source-command-testcase-creator\SKILL.md" `
-           "$TargetDir\.agents\skills\source-command-testcase-creator\SKILL.md" `
-           ".agents\skills\source-command-testcase-creator\SKILL.md"
-Copy-Asset "$ScriptDir\.agents\skills\source-command-testcase-export\SKILL.md" `
-           "$TargetDir\.agents\skills\source-command-testcase-export\SKILL.md" `
-           ".agents\skills\source-command-testcase-export\SKILL.md"
+Copy-TreeFiles "$ScriptDir\dist\.agents" "$TargetDir\.agents" ".agents"
 
 # ---------- Cursor Skill ----------
 Write-Host ""
 Write-Info "-> 正在复制 Cursor Skill..."
-Copy-Asset "$ScriptDir\.cursor\skills\testcase-creator\skill.md" `
-           "$TargetDir\.cursor\skills\testcase-creator\skill.md" `
-           ".cursor\skills\testcase-creator\skill.md"
-
-Copy-Asset "$ScriptDir\.cursor\skills\testcase-export\skill.md" `
-           "$TargetDir\.cursor\skills\testcase-export\skill.md" `
-           ".cursor\skills\testcase-export\skill.md"
+Copy-TreeFiles "$ScriptDir\dist\.cursor" "$TargetDir\.cursor" ".cursor"
 
 # ---------- Claude Code 命令 ----------
 Write-Host ""
 Write-Info "-> 正在复制 Claude Code 命令..."
-Copy-Asset "$ScriptDir\.claude\commands\testcase-creator.md" `
-           "$TargetDir\.claude\commands\testcase-creator.md" `
-           ".claude\commands\testcase-creator.md"
-Copy-Asset "$ScriptDir\.claude\commands\testcase-export.md" `
-           "$TargetDir\.claude\commands\testcase-export.md" `
-           ".claude\commands\testcase-export.md"
+Copy-TreeFiles "$ScriptDir\dist\.claude" "$TargetDir\.claude" ".claude"
 
 # ---------- 测试资产目录 ----------
 Write-Host ""
 Write-Info "-> 正在复制测试资产目录..."
 
-$Assets = @(
-    @{ S = ".testcase-assets\checkpoints-index.md";        D = ".testcase-assets\checkpoints-index.md" },
-    @{ S = ".testcase-assets\review-expectations-index.md"; D = ".testcase-assets\review-expectations-index.md" },
-    @{ S = ".testcase-assets\templates\testcase-table.md";  D = ".testcase-assets\templates\testcase-table.md" },
-    @{ S = ".testcase-assets\templates\csv-schema.json";    D = ".testcase-assets\templates\csv-schema.json" },
-    @{ S = ".testcase-assets\templates\jira-csv-template.csv"; D = ".testcase-assets\templates\jira-csv-template.csv" },
-    @{ S = ".testcase-assets\project.config.md";            D = ".testcase-assets\project.config.md" }
-)
-
-foreach ($a in $Assets) {
-    Copy-Asset "$ScriptDir\$($a.S)" "$TargetDir\$($a.D)" $a.D
+Copy-TreeFiles "$ScriptDir\framework\templates" "$TargetDir\.testcase-assets\templates" ".testcase-assets/templates"
+Get-ChildItem -Path "$ScriptDir\projects\_template" -File | ForEach-Object {
+    Copy-Asset $_.FullName "$TargetDir\.testcase-assets\$($_.Name)" ".testcase-assets/$($_.Name)"
 }
 
 # 创建 history 目录
@@ -159,16 +151,8 @@ if (-not (Test-Path $GitKeep)) {
 
 # ---------- 导出脚本 ----------
 Write-Host ""
-Write-Info "-> 正在复制导出脚本..."
-Copy-Asset "$ScriptDir\.testcase-assets\scripts\export_excel.py" `
-           "$TargetDir\.testcase-assets\scripts\export_excel.py" `
-           ".testcase-assets\scripts\export_excel.py"
-Copy-Asset "$ScriptDir\.testcase-assets\scripts\export_xmind.py" `
-           "$TargetDir\.testcase-assets\scripts\export_xmind.py" `
-           ".testcase-assets\scripts\export_xmind.py"
-Copy-Asset "$ScriptDir\.testcase-assets\scripts\md_to_csv.py" `
-           "$TargetDir\.testcase-assets\scripts\md_to_csv.py" `
-           ".testcase-assets\scripts\md_to_csv.py"
+Write-Info "-> 正在复制导出与质检脚本..."
+Copy-TreeFiles "$ScriptDir\framework\scripts" "$TargetDir\.testcase-assets\scripts" ".testcase-assets/scripts"
 
 # ---------- 纯对话工具指南 ----------
 Write-Host ""
@@ -234,7 +218,10 @@ $SettingsContent = @"
       "Bash(textutil -convert txt -stdout $HomePath/Desktop/*.docx)",
       "Bash(python3 .testcase-assets/scripts/export_excel.py .testcase-assets/history/*/export_data.json .testcase-assets/history/*/testcases.xlsx)",
       "Bash(python3 .testcase-assets/scripts/export_xmind.py .testcase-assets/history/*/export_data.json .testcase-assets/history/*/testcases.xmind)",
-      "Bash(python3 .testcase-assets/scripts/md_to_csv.py .testcase-assets/history/*/2-用例定稿.md .testcase-assets/history/*/jira_export.csv)"
+      "Bash(python3 .testcase-assets/scripts/md_to_csv.py .testcase-assets/history/*/2-用例定稿.md .testcase-assets/history/*/jira_export.csv)",
+      "Bash(python3 .testcase-assets/scripts/testcase_quality.py .testcase-assets/history/*/2-用例定稿.md --audit-output .testcase-assets/history/*/audit-summary.md --strict)",
+      "Bash(python3 .testcase-assets/scripts/testcase_quality.py .testcase-assets/history/*/export_data.json --audit-output .testcase-assets/history/*/audit-summary.md --strict)",
+      "Bash(python3 .testcase-assets/scripts/testcase_quality.py .testcase-assets/history/*/export_data.json --audit-output .testcase-assets/history/*/audit-summary.md --xlsx .testcase-assets/history/*/testcases.xlsx --strict)"
     ]
   }
 }
@@ -252,7 +239,7 @@ Write-Host ""
 Write-Host "[DIR] 目标项目结构："
 Write-Host "   $TargetDir\"
 Write-Host "   +-- .agents\skills\"
-Write-Host "   |   +-- source-command-testcase-creator\SKILL.md"
+Write-Host "   |   +-- source-command-testcase-creator\SKILL.md + references\"
 Write-Host "   |   +-- source-command-testcase-export\SKILL.md"
 Write-Host "   +-- .cursor\skills\testcase-creator\skill.md"
 Write-Host "   +-- .claude\commands\"
@@ -271,6 +258,7 @@ Write-Host "       +-- scripts\"
 Write-Host "       |   +-- export_excel.py         (Excel 导出)"
 Write-Host "       |   +-- export_xmind.py         (XMind 导出)"
 Write-Host "       |   +-- md_to_csv.py            (Jira CSV 导出)"
+Write-Host "       |   +-- testcase_quality.py     (质量检查与审计)"
 Write-Host "       +-- history\"
 Write-Host "           +-- history-index.md"
 Write-Host "           +-- .gitkeep"
@@ -278,7 +266,7 @@ Write-Host ""
 Write-Host ">> 下一步："
 Write-Color "   1. [必填] 编辑 .testcase-assets\project.config.md" Green
 Write-Color "   2. [必填] 根据实际业务补充 .testcase-assets\checkpoints-index.md" Green
-Write-Color "   3. [环境] 安装 Excel 导出依赖：pip install openpyxl" Yellow
+Write-Color "   3. [环境] 锁定依赖自动安装：openpyxl==3.1.5 json-repair==0.61.2" Yellow
 Write-Color "   4. [环境] 如需读取 PDF：winget install poppler  (或在 WSL 中 apt install poppler-utils)" Yellow
 Write-Color "   5. [环境] 如需读取 DOCX：pip install python-docx" Yellow
 Write-Host "   6. Cursor 用户：输入 /testcase-creator 触发"

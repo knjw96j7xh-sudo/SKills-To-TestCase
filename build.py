@@ -3,9 +3,12 @@
 # 用法: python3 build.py [--clean]
 
 import os
+import shutil
 import sys
 import yaml
 from pathlib import Path
+
+from check_project_copies import print_report, scan_project_copies
 
 SCRIPT_DIR = Path(__file__).parent
 SKILLS_DIR = SCRIPT_DIR / "skills"
@@ -25,6 +28,19 @@ def replace_variables(value, variables):
     for key, val in variables.items():
         value = value.replace(f'{{{{{key}}}}}', str(val))
     return value
+
+
+def copy_references(skill_dir, output_file):
+    """将 Skill references 发布到主文件旁的独立命名空间。"""
+    source_dir = skill_dir / "references"
+    if not source_dir.is_dir():
+        return
+
+    target_dir = output_file.parent / "references" / skill_dir.name
+    if target_dir.exists():
+        shutil.rmtree(target_dir)
+    shutil.copytree(source_dir, target_dir)
+    print(f"[OK] 生成: {target_dir}")
 
 
 def generate_platform_file(skill_dir, platform, meta, prompt_content):
@@ -90,6 +106,7 @@ def generate_platform_file(skill_dir, platform, meta, prompt_content):
         f.write(prompt_content)
 
     print(f"[OK] 生成: {output_file}")
+    copy_references(skill_dir, output_file)
 
 
 def main():
@@ -99,7 +116,6 @@ def main():
     # 清理 dist 目录
     if clean:
         print("[CLEAN] 清理 dist 目录...")
-        import shutil
         if DIST_DIR.exists():
             shutil.rmtree(DIST_DIR)
 
@@ -149,6 +165,9 @@ def main():
     print(f"  cp -r dist/.claude .claude")
     print(f"  cp -r dist/.cursor .cursor")
     print(f"  cp -r dist/.agents .agents")
+
+    print("")
+    print_report(scan_project_copies(SCRIPT_DIR), SCRIPT_DIR)
 
 
 if __name__ == '__main__':

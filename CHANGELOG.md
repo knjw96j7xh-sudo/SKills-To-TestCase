@@ -4,6 +4,27 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.8.0] - 2026-07-23
+
+### Added
+
+- 新增 `testcase_quality.py`，检查重复 ID、必填空值、非法枚举、步骤编号、步骤与预期对应、模糊措辞、术语和引号
+- 导出时生成 `audit-summary.md`，汇总模块、场景、空值、异常字段及 Excel 公式错误
+- 新增 `requirements.lock`，固定 PyYAML、openpyxl 和 json-repair 版本
+
+### Changed
+
+- 将 testcase-creator 的输入读取、评审和导出细节拆分到按阶段加载的 `references/`
+- 构建和初始化脚本递归发布 Skill reference，Windows 初始化统一使用 `dist/`、`framework/` 源
+- testcase-creator 升级至 1.8.0，testcase-export 升级至 1.5.0
+
+## [1.7.1] - 2026-07-23
+
+### Added
+
+- 新增项目副本漂移检查，比较 `projects/*/.agents` 与 Skill 构建产物、项目导出脚本与 `framework/scripts/`
+- 构建完成后自动给出漂移警告，并提供 `--strict` 模式供 CI 阻断直接修改项目副本
+
 ## [1.7.0] - 2026-07-23
 
 ### Added

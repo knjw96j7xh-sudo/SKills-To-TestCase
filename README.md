@@ -21,11 +21,11 @@
 | 工具 | 用途 | macOS | Windows |
 |------|------|-------|---------|
 | Python 3.x | 运行导出脚本 | 系统自带 | [python.org](https://python.org) |
-| openpyxl | Excel 导出 | `pip3 install openpyxl` | `pip install openpyxl` |
+| Python 包 | 构建、Excel、JSON 修复 | `python3 -m pip install -r requirements.lock` | `py -m pip install -r requirements.lock` |
 | pdftotext | 读取 PDF（需求来源 D） | `brew install poppler` | WSL: `apt install poppler-utils` |
 | XMind 8+ | 打开 .xmind | [xmind.app](https://xmind.app) | [xmind.app](https://xmind.app) |
 
-> XMind 和 Jira CSV 导出无需额外 Python 包。Windows 用户建议在 WSL 中运行 Claude Code。
+> PyYAML、openpyxl 和 json-repair 的版本统一锁定在 `requirements.lock`。导出脚本发现依赖缺失或版本不一致时，也只安装锁定版本。
 
 ---
 
@@ -33,8 +33,8 @@
 
 ```
 .
-├── skills/                        # 统一源文件，只在这里改 prompt
-│   ├── testcase-creator/          #   meta.yaml + prompt.md
+├── skills/                        # 统一源文件，只在这里改 prompt/reference
+│   ├── testcase-creator/          #   meta.yaml + prompt.md + references/
 │   └── testcase-export/           #   meta.yaml + prompt.md
 ├── framework/                     # 通用框架（与业务无关）
 │   ├── templates/                 #   用例表模板、列配置、CSV Schema
@@ -44,10 +44,25 @@
 │   └── <your-project>/            #   你的项目（project.config + checkpoints + reviews）
 ├── dist/                          # 构建产物（自动生成，gitignore）
 ├── build.sh / build.py            # 构建脚本
+├── requirements.lock              # 锁定 Python 依赖版本
+├── check_project_copies.py        # 检查项目副本是否偏离 skills/framework
 ├── init-testcase.sh / .ps1        # 一键初始化脚本
 ├── TESTCASE_GUIDE.md              # 纯对话工具（ChatGPT 等）使用指南
 └── CHANGELOG.md
 ```
+
+### 统一源保护
+
+`skills/` 和 `framework/` 是唯一修改源。构建后会自动扫描 `projects/*/.agents` 和
+`projects/*/.testcase-assets/scripts`；发现项目副本被直接修改、缺少文件或多出文件时给出警告。
+
+```bash
+python3 check_project_copies.py           # 本地检查，仅警告
+python3 check_project_copies.py --strict  # CI 检查，发现漂移返回失败
+```
+
+发现漂移时，请修改 `skills/*/prompt.md`、`skills/*/meta.yaml` 或 `framework/scripts/`，
+再运行构建和初始化命令同步项目副本，不要直接修改 `projects/*` 中的生成文件。
 
 ---
 
@@ -95,6 +110,8 @@
 | J | Jira CSV | UTF-8 BOM 编码，可直接导入 Jira |
 | E | Excel (.xlsx) | 场景颜色、冻结表头、优先级着色、统计 Sheet |
 | X | XMind (.xmind) | 四级结构：检查点 → 场景类型 → 用例 → 步骤 |
+
+导出前自动运行内容质量检查，检查重复 ID、核心空值、非法枚举、步骤编号、模糊措辞、术语和引号；每次导出生成 `audit-summary.md`，汇总模块、场景、空值、异常字段及 Excel 公式错误。
 
 ---
 
@@ -165,7 +182,8 @@ vim projects/my-project/checkpoints-index.md     # 补充检查点
 ### 修改 skill 流程
 
 ```bash
-vim skills/testcase-creator/prompt.md     # 编辑源文件
+vim skills/testcase-creator/prompt.md     # 编辑流程入口和强制约束
+vim skills/testcase-creator/references/*.md  # 编辑阶段细节
 ./build.sh                                # 重新构建
 ./init-testcase.sh <项目名> <目标路径> --force  # 覆盖安装
 ```
@@ -190,6 +208,7 @@ vim projects/<项目名>/checkpoints-index.md      # 添加检查点
 │   ├── 0-用例准备.md
 │   ├── 1-评审记要.md
 │   ├── 2-用例定稿.md
+│   ├── audit-summary.md                  # 内容质量与交付审计
 │   └── jira_export.csv
 └── 20260615_090000_用户中心/
     └── ...

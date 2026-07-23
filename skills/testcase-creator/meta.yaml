@@ -1,6 +1,6 @@
 name: testcase-creator
 description: "结合文字需求、文档与设计稿导出文件分析，基于检查点/评审点资产按五阶段流程生成测试用例，支持评审迭代与多平台导出（Jira CSV / Excel / XMind）"
-version: "1.7.0"
+version: "1.8.0"
 
 platforms:
   claude:

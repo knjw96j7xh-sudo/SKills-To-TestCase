@@ -152,6 +152,17 @@ copy_item() {
   fi
 }
 
+copy_tree_files() {
+  local SRC_ROOT="$1"
+  local DEST_ROOT="$2"
+  local LABEL_ROOT="$3"
+
+  while IFS= read -r src; do
+    local relative="${src#"$SRC_ROOT"/}"
+    copy_item "$src" "$DEST_ROOT/$relative" "$LABEL_ROOT/$relative"
+  done < <(find "$SRC_ROOT" -type f | sort)
+}
+
 # ---------- 构建最新 Skill ----------
 echo -e "${BLUE}-> 正在构建最新 Skill...${NC}"
 "$SCRIPT_DIR/build.sh" --clean
@@ -160,28 +171,9 @@ echo ""
 # ---------- 开始复制 ----------
 echo -e "${BLUE}-> 正在复制 Skill 文件（从 dist/）...${NC}"
 
-# Claude Code 命令
-for f in "$SCRIPT_DIR"/dist/.claude/commands/*.md; do
-  [ -f "$f" ] && copy_item "$f" "$TARGET_DIR/.claude/commands/$(basename "$f")" ".claude/commands/$(basename "$f")"
-done
-
-# Cursor Skills
-for dir in "$SCRIPT_DIR"/dist/.cursor/skills/*/; do
-  [ -d "$dir" ] || continue
-  skill_name=$(basename "$dir")
-  for f in "$dir"*.md; do
-    [ -f "$f" ] && copy_item "$f" "$TARGET_DIR/.cursor/skills/$skill_name/$(basename "$f")" ".cursor/skills/$skill_name/$(basename "$f")"
-  done
-done
-
-# Agent/Codex Skills
-for dir in "$SCRIPT_DIR"/dist/.agents/skills/*/; do
-  [ -d "$dir" ] || continue
-  skill_name=$(basename "$dir")
-  for f in "$dir"*.md; do
-    [ -f "$f" ] && copy_item "$f" "$TARGET_DIR/.agents/skills/$skill_name/$(basename "$f")" ".agents/skills/$skill_name/$(basename "$f")"
-  done
-done
+copy_tree_files "$SCRIPT_DIR/dist/.claude" "$TARGET_DIR/.claude" ".claude"
+copy_tree_files "$SCRIPT_DIR/dist/.cursor" "$TARGET_DIR/.cursor" ".cursor"
+copy_tree_files "$SCRIPT_DIR/dist/.agents" "$TARGET_DIR/.agents" ".agents"
 
 echo ""
 echo -e "${BLUE}-> 正在复制通用框架文件...${NC}"
@@ -271,7 +263,10 @@ cat > "$SETTINGS_FILE" << SETTINGS_EOF
       "Bash(textutil -convert txt -stdout ${HOME}/Desktop/*.docx)",
       "Bash(python3 .testcase-assets/scripts/export_excel.py .testcase-assets/history/*/export_data.json .testcase-assets/history/*/testcases.xlsx)",
       "Bash(python3 .testcase-assets/scripts/export_xmind.py .testcase-assets/history/*/export_data.json .testcase-assets/history/*/testcases.xmind)",
-      "Bash(python3 .testcase-assets/scripts/md_to_csv.py .testcase-assets/history/*/2-用例定稿.md .testcase-assets/history/*/jira_export.csv)"
+      "Bash(python3 .testcase-assets/scripts/md_to_csv.py .testcase-assets/history/*/2-用例定稿.md .testcase-assets/history/*/jira_export.csv)",
+      "Bash(python3 .testcase-assets/scripts/testcase_quality.py .testcase-assets/history/*/2-用例定稿.md --audit-output .testcase-assets/history/*/audit-summary.md --strict)",
+      "Bash(python3 .testcase-assets/scripts/testcase_quality.py .testcase-assets/history/*/export_data.json --audit-output .testcase-assets/history/*/audit-summary.md --strict)",
+      "Bash(python3 .testcase-assets/scripts/testcase_quality.py .testcase-assets/history/*/export_data.json --audit-output .testcase-assets/history/*/audit-summary.md --xlsx .testcase-assets/history/*/testcases.xlsx --strict)"
     ]
   }
 }
@@ -288,7 +283,7 @@ echo ""
 echo -e "[DIR] 目标项目结构："
 echo -e "   ${TARGET_DIR}/"
 echo -e "   ├── .agents/skills/"
-echo -e "   │   ├── source-command-testcase-creator/SKILL.md"
+echo -e "   │   ├── source-command-testcase-creator/SKILL.md + references/"
 echo -e "   │   └── source-command-testcase-export/SKILL.md"
 echo -e "   ├── .cursor/skills/testcase-creator/skill.md"
 echo -e "   ├── .claude/commands/"
@@ -307,7 +302,8 @@ echo -e "       │   └── jira-csv-template.csv"
 echo -e "       ├── scripts/"
 echo -e "       │   ├── export_excel.py         （Excel 导出）"
 echo -e "       │   ├── export_xmind.py         （XMind 导出）"
-echo -e "       │   └── md_to_csv.py            （Jira CSV 导出）"
+echo -e "       │   ├── md_to_csv.py            （Jira CSV 导出）"
+echo -e "       │   └── testcase_quality.py     （质量检查与审计）"
 echo -e "       └── history/"
 echo -e "           ├── history-index.md"
 echo -e "           └── .gitkeep"
@@ -315,7 +311,7 @@ echo ""
 echo -e ">> 下一步："
 echo -e "   1. 【必填】编辑 ${GREEN}.testcase-assets/project.config.md${NC}，填写项目名称、业务域、默认导出路径"
 echo -e "   2. 【必填】根据实际业务补充 ${GREEN}.testcase-assets/checkpoints-index.md${NC}"
-echo -e "   3. 【环境】依赖自动安装：${YELLOW}openpyxl json-repair${NC}（首次导出时自动完成）"
+echo -e "   3. 【环境】锁定依赖自动安装：${YELLOW}openpyxl==3.1.5 json-repair==0.61.2${NC}"
 echo -e "   4. 【环境】如需读取 PDF 文件：${YELLOW}brew install poppler${NC}  (可选)"
 echo -e "   5. Cursor 用户：在项目中输入 ${GREEN}/testcase-creator${NC} 触发"
 echo -e "   6. Claude Code 用户：输入 ${GREEN}/testcase-creator${NC} 触发"

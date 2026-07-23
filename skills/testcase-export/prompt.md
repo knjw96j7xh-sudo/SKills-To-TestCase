@@ -45,6 +45,13 @@
 
 ### 3a. Jira CSV 导出（若选 J）
 
+- 导出前运行内容质量检查并生成审计摘要；发现 ERROR 时修复定稿后重试：
+  ```bash
+  python3 .testcase-assets/scripts/testcase_quality.py \
+    .testcase-assets/history/<选定目录>/2-用例定稿.md \
+    --audit-output .testcase-assets/history/<选定目录>/audit-summary.md \
+    --strict
+  ```
 - 按 `.testcase-assets/templates/csv-schema.json` 的字段映射规则生成 CSV
 - 运行转换脚本：
   ```bash
@@ -99,6 +106,8 @@
 > - `type` 字段值必须为以下之一：`正向` / `异常` / `边界` / `并发`。
 > - `remark`：可选备注；没有内容时写为空字符串。
 
+独立导出已有定稿时允许保留已有备注；不得用审计信息覆盖备注。
+
 **步骤 A2 — 强制自检 JSON 格式**（必须执行，循环直到通过）：
 
 写入完成后，你必须亲自验证 JSON 格式无误。用以下命令检查：
@@ -110,6 +119,17 @@ python3 -c "import json; json.load(open('.testcase-assets/history/<选定目录>
 - 若输出 `[FAIL] JSON invalid`：**你必须**读取错误信息，自行找出 JSON 中的格式问题（单引号、尾逗号、`None`/`True`/`False` 等），修正文件内容后重新写入，然后**再次运行上述命令**，直到输出 `[OK] JSON valid` 为止。
 - 若输出 `[OK] JSON valid`：继续下一步。
 
+JSON 通过后执行内容质量检查并生成审计摘要：
+
+```bash
+python3 .testcase-assets/scripts/testcase_quality.py \
+  .testcase-assets/history/<选定目录>/export_data.json \
+  --audit-output .testcase-assets/history/<选定目录>/audit-summary.md \
+  --strict
+```
+
+ERROR 级问题（重复 ID、重复步骤编号、核心必填字段为空、非法场景或优先级）必须修复后重试；WARN 级问题保留在审计摘要中，不阻断导出。
+
 > **常见错误自查清单**（按出现频率排序）：
 > 1. 字符串用了单引号 `'`（必须全部用双引号 `"`）
 > 2. 对象 `}` 或数组 `]` 前有多余逗号
@@ -119,8 +139,6 @@ python3 -c "import json; json.load(open('.testcase-assets/history/<选定目录>
 > 6. 字符串内包含未转义的真实换行或 Tab（须写成 `\n`、`\t`）
 > 7. 反斜杠未转义，如 Windows 路径 `C:\Users`（须写成 `C:\\Users`）
 > 8. 数字有前导零，如 `001`（应用引号包裹为 `"001"`）
-
-**步骤 B — 调用导出脚本**：
 
 **步骤 B — 调用导出脚本**：
 
@@ -139,11 +157,22 @@ python3 -c "import json; json.load(open('.testcase-assets/history/<选定目录>
   ```
 
 **步骤 C — 确认输出**：脚本执行后，输出文件路径并提示用户：
-```
+
+```text
 [OK] 文件已生成：
   Excel → .testcase-assets/history/<选定目录>/testcases.xlsx
   XMind → .testcase-assets/history/<选定目录>/testcases.xmind
 [TIP] XMind 文件需 XMind 8 或更高版本打开。
+```
+
+若生成了 Excel，再次运行公式检查并更新同一审计摘要：
+
+```bash
+python3 .testcase-assets/scripts/testcase_quality.py \
+  .testcase-assets/history/<选定目录>/export_data.json \
+  --audit-output .testcase-assets/history/<选定目录>/audit-summary.md \
+  --xlsx .testcase-assets/history/<选定目录>/testcases.xlsx \
+  --strict
 ```
 
 ---
@@ -157,6 +186,7 @@ python3 -c "import json; json.load(open('.testcase-assets/history/<选定目录>
   Jira CSV → .testcase-assets/history/<选定目录>/jira_export.csv
   Excel    → .testcase-assets/history/<选定目录>/testcases.xlsx（如已生成）
   XMind    → .testcase-assets/history/<选定目录>/testcases.xmind（如已生成）
+  审计摘要 → .testcase-assets/history/<选定目录>/audit-summary.md
 
 [TIP] 可再次运行 /testcase-export 导出其他格式。
 [TOKEN] 本次会话结束时，请留意终端底部的 token 消耗统计。

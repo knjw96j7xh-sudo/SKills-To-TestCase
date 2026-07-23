@@ -14,6 +14,9 @@ ROOT = Path(__file__).resolve().parents[1]
 class RemarkPolicyTest(unittest.TestCase):
     def test_creator_requires_empty_remarks(self):
         prompt = (ROOT / "skills/testcase-creator/prompt.md").read_text(encoding="utf-8")
+        export_reference = (
+            ROOT / "skills/testcase-creator/references/export-workflow.md"
+        ).read_text(encoding="utf-8")
         config = json.loads(
             (ROOT / "framework/templates/testcase-table-config.json").read_text(encoding="utf-8")
         )
@@ -22,8 +25,8 @@ class RemarkPolicyTest(unittest.TestCase):
         )
 
         self.assertIn("**备注列强制规则**", prompt)
-        self.assertIn('"remark": ""', prompt)
-        self.assertIn("assert all(tc.get('remark', '') == ''", prompt)
+        self.assertIn('"remark": ""', export_reference)
+        self.assertIn("assert all(tc.get('remark', '') == ''", export_reference)
         self.assertIn("生成用例时固定留空", remark_column["description"])
 
     def test_shared_excel_export_preserves_existing_remark(self):

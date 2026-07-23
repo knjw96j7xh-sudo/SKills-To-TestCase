@@ -31,27 +31,41 @@ import sys
 import re
 import json
 import subprocess
+from importlib.metadata import PackageNotFoundError, version
 import zipfile
 import uuid
 from datetime import datetime, timezone
 from collections import defaultdict
 
 
-# --- 依赖自动安装 ----------------------------------------------------
+# --- 依赖自动安装（版本与仓库 requirements.lock 一致）---------------
+
+PINNED_DEPENDENCIES = {
+    "json-repair": "0.61.2",
+}
 
 def _ensure(package: str, import_name: str = None):
     """自动安装缺失的 Python 依赖。"""
     if import_name is None:
         import_name = package.replace("-", "_")
+    expected = PINNED_DEPENDENCIES[package]
+    requirement = f"{package}=={expected}"
     try:
-        __import__(import_name)
-    except ImportError:
-        print(f"[INSTALL] 正在安装 {package} ...")
+        if version(package) == expected:
+            __import__(import_name)
+            return
+    except (ImportError, PackageNotFoundError):
+        pass
+
+    try:
+        print(f"[INSTALL] 正在安装 {requirement} ...")
         subprocess.check_call(
-            [sys.executable, "-m", "pip", "install", package, "-q"],
+            [sys.executable, "-m", "pip", "install", requirement, "-q"],
             stdout=subprocess.DEVNULL,
         )
-        print(f"[INSTALL] {package} 安装完成")
+        print(f"[INSTALL] {requirement} 安装完成")
+    except subprocess.CalledProcessError as error:
+        raise RuntimeError(f"无法安装锁定依赖 {requirement}") from error
 
 
 _ensure("json-repair")
