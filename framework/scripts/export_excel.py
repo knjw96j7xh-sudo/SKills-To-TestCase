@@ -15,18 +15,22 @@ JSON 格式（由 Claude Code 生成）：
   "testcases": [
     {
       "id":           "TC-001",
+      "module":       "用户中心",
       "test_point":   "测试点描述",
       "precondition": "前置条件",
       "steps":        "1. 步骤一\n2. 步骤二",
       "expected":     "预期结果",
       "checkpoint":   "XX-01",
-      "type":         "正向"          // 正向 / 异常 / 边界 / 并发
+      "type":         "正向",
+      "priority":     "P1",
+      "remark":       ""
     }
   ]
 }
 """
 
 import sys
+import re
 import json
 import subprocess
 from datetime import datetime
@@ -155,17 +159,18 @@ STATUS_OPTS  = ["未执行", "通过", "失败", "阻塞", "跳过"]
 #   key = None 表示留白由人工填写
 COLUMNS = [
     ("用例ID",      11,  "id"),
-    ("测试点",      30,  "test_point"),
-    ("前置条件",    24,  "precondition"),
-    ("操作步骤",    48,  "steps"),
-    ("预期结果",    34,  "expected"),
+    ("所属模块",    16,  "module"),
+    ("测试点",      28,  "test_point"),
+    ("前置条件",    22,  "precondition"),
+    ("操作步骤",    44,  "steps"),
+    ("预期结果",    32,  "expected"),
     ("关联检查点",  12,  "checkpoint"),
     ("场景类型",    10,  "type"),
     ("优先级",       8,  "_priority"),   # 自动赋值
     ("执行状态",     9,  None),          # 留空
     ("编写人",       8,  None),          # 留空
     ("执行人",       8,  None),          # 留空
-    ("备注",        18,  None),          # 留空
+    ("备注",        20,  "remark"),      # 从 JSON 读取预填内容，无则留空
 ]
 
 N_COLS = len(COLUMNS)
@@ -280,6 +285,7 @@ def write_testcase_row(ws, row_idx: int, tc: dict, row_in_group: int):
 
     values = {
         "id":           tc.get("id", ""),
+        "module":       tc.get("module", ""),
         "test_point":   tc.get("test_point", ""),
         "precondition": tc.get("precondition", ""),
         "steps":        steps_display,
@@ -287,6 +293,7 @@ def write_testcase_row(ws, row_idx: int, tc: dict, row_in_group: int):
         "checkpoint":   checkpoint_str,
         "type":         tc_type,
         "_priority":    priority,
+        "remark":       tc.get("remark", ""),
         None:           "",   # 留空列
     }
 
@@ -512,6 +519,16 @@ def export_excel(input_json: str, output_xlsx: str):
     if not testcases:
         print("[WARN] testcases 为空，将生成仅含标题的 Excel 文件")
 
+    # 按用例ID排序（TC-001 < TC-001a < TC-002）
+    def _sort_key(tc):
+        tid = tc.get("id", "")
+        match = re.match(r"TC-(\d+)([a-z]*)", tid, re.IGNORECASE)
+        if match:
+            return (int(match.group(1)), match.group(2).lower())
+        return (99999, tid)
+
+    testcases.sort(key=_sort_key)
+
     wb = Workbook()
 
     # ── 主表 Sheet ─────────────────────────────────────────────────────────────
@@ -523,23 +540,16 @@ def export_excel(input_json: str, output_xlsx: str):
     # 第2行：列名
     write_header_row(ws)
 
-    # 按场景类型分组排序
-    groups = defaultdict(list)
-    for tc in testcases:
-        groups[tc.get("type", "正向")].append(tc)
-
+    # 按用例ID全局排序后直接写入，类型切换时保留视觉分隔
     current_row = 3
-    for tc_type in TYPE_ORDER:
-        cases = groups.get(tc_type, [])
-        if not cases:
-            continue
-        # 用例行（不插额外标题行，筛选区域保持连续）
-        for idx, tc in enumerate(cases, start=1):
-            write_testcase_row(ws, current_row, tc, idx)
-            # 每组第一行加粗上边框作为视觉分隔
-            if idx == 1:
-                apply_group_separator(ws, current_row, tc_type)
-            current_row += 1
+    prev_type = None
+    for global_idx, tc in enumerate(testcases, start=1):
+        tc_type = tc.get("type", "正向")
+        write_testcase_row(ws, current_row, tc, global_idx)
+        if tc_type != prev_type:
+            apply_group_separator(ws, current_row, tc_type)
+            prev_type = tc_type
+        current_row += 1
 
     last_data_row = current_row - 1
 
@@ -564,7 +574,7 @@ def export_excel(input_json: str, output_xlsx: str):
         sys.exit(1)
 
     print(f"[OK] Excel 已生成：{output_xlsx}（共 {len(testcases)} 条用例）")
-    print(f"     包含列：用例ID / 测试点 / 前置条件 / 操作步骤 / 预期结果")
+    print(f"     包含列：用例ID / 所属模块 / 测试点 / 前置条件 / 操作步骤 / 预期结果")
     print(f"           关联检查点 / 场景类型 / 优先级 / 执行状态 / 编写人 / 执行人 / 备注")
 
 

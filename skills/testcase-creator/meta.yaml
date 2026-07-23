@@ -1,6 +1,6 @@
 name: testcase-creator
-description: "基于检查点/评审点资产，按标准五阶段流程生成测试用例，支持评审迭代与多平台导出（Jira CSV / Excel / XMind）"
-version: "1.4.0"
+description: "结合文字需求、文档与设计稿导出文件分析，基于检查点/评审点资产按五阶段流程生成测试用例，支持评审迭代与多平台导出（Jira CSV / Excel / XMind）"
+version: "1.7.0"
 
 platforms:
   claude:
@@ -22,7 +22,7 @@ platforms:
     path: ".agents/skills/source-command-testcase-creator/SKILL.md"
     frontmatter:
       name: "source-command-{{name}}"
-      description: "基于检查点/评审点资产，按标准五阶段流程生成测试用例，支持评审迭代与多格式导出"
+      description: "结合需求与设计稿导出文件分析，基于检查点/评审点资产按五阶段流程生成测试用例，支持评审迭代与多格式导出"
     body_from: prompt.md
     prepend: |
       # source-command-testcase-creator

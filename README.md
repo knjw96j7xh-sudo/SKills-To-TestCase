@@ -7,13 +7,12 @@
 ## 最快体验
 
 ```bash
-./build.sh                                    # 1. 构建（skills 源 → 各平台格式）
-./init-testcase.sh _template .                # 2. 初始化（复制模板到当前目录）
+./init-testcase.sh _template .                # 构建最新 Skill 并初始化到当前目录
 ```
 
 然后在 Claude Code 或 Cursor 中输入 `/testcase-creator`，按提示走完五阶段流程。
 
-> `./build.sh` 做了什么：`skills/` 目录是统一源文件，`dist/` 是自动生成的各平台格式产物（Claude Code、Cursor、Codex）。修改 prompt 后必须重新构建。只使用不修改则构建一次即可。
+> 初始化脚本每次都会重新构建 `dist/`，确保部署的是最新 Skill。仅需生成各平台产物、不执行初始化时，可单独运行 `./build.sh`。
 
 ---
 
@@ -67,11 +66,11 @@
 
 ![用例生成 Skill 流程图](assets/testcase-skill-flow.png)
 
-### 1. 需求输入
+### 1. 需求与设计输入
 
-支持八种来源：文字粘贴 / 乐享链接 / 接口文档 / 本地文件（md/docx/pdf）/ 图片截图 / 飞书文档 / Excel 需求列表 / Jira/Tapd/禅道链接。
+支持八种来源：文字粘贴 / 乐享链接 / 接口文档 / 本地文件（md/docx/pdf）/ 图片或截图 / 飞书文档 / Excel 需求列表 / Jira/Tapd/禅道链接。
 
-提取测试对象、业务规则、限制条件，输出确认清单。确认后创建运行子目录。
+设计稿请先导出为 PDF 或图片，可与任一需求来源组合输入。阶段一会分别提取测试对象、业务规则、页面流程、组件字段、交互状态和校验反馈，并标记需求与设计之间的缺失、冲突及补充项。确认后创建运行子目录。
 
 ### 2. 输入结构化
 
@@ -79,7 +78,7 @@
 
 ### 3. 用例生成
 
-基于需求要素 + 检查点，生成覆盖正向/异常/边界/并发四类的用例表，包含优先级列（P0-P3）。
+基于需求要素 + 设计稿要素（如有）+ 检查点，生成覆盖正向/异常/边界/并发四类的用例表，包含优先级列（P0-P3）。
 
 > P0=异常场景（阻断） / P1=正向主流程/边界 / P2=并发 / P3=体验类
 
@@ -105,10 +104,13 @@
 
 ```bash
 # macOS / Linux
-./init-testcase.sh <项目名称> <目标路径>
+./init-testcase.sh <项目名称或目录> <目标路径>
 
 # 示例：用模板初始化新项目
 ./init-testcase.sh _template /path/to/your-project
+
+# 也可以直接传入项目资产目录
+./init-testcase.sh ./projects/_template /path/to/your-project
 
 # 强制覆盖已有文件
 ./init-testcase.sh _template /path/to/your-project --force
@@ -116,7 +118,7 @@
 
 | 参数 | 说明 |
 |------|------|
-| `<项目名称>` | `projects/` 下的子目录名，首次用 `_template` |
+| `<项目名称或目录>` | `projects/` 下的子目录名（如 `_template`），或项目资产目录路径 |
 | `<目标路径>` | 你要安装到的实际项目目录（绝对路径） |
 
 脚本会自动完成：复制 skill 文件、框架模板、导出脚本、项目资产，生成 `.claude/settings.local.json`，初始化 history 目录，追加 `.gitignore` 规则。
@@ -124,7 +126,6 @@
 ### 安装到当前目录（在本仓库内使用）
 
 ```bash
-./build.sh
 ./init-testcase.sh _template .
 ```
 
@@ -249,4 +250,4 @@ vim projects/<项目名>/checkpoints-index.md      # 添加检查点
 
 ---
 
-*由 testcase-creator skill 维护 · 最后更新：2026-06-09*
+*由 testcase-creator skill 维护 · 最后更新：2026-07-23*

@@ -74,6 +74,16 @@ def parse_md_table(lines):
     """解析 MD 表格，返回用例列表"""
     testcases = []
     current_suite = ""
+    column_map = {}
+
+    def split_cells(line):
+        return [cell.strip() for cell in line.strip().strip('|').split('|')]
+
+    def get_cell(cells, header, fallback_index=None):
+        index = column_map.get(header, fallback_index)
+        if index is None or index >= len(cells):
+            return ''
+        return cells[index]
 
     i = 0
     while i < len(lines):
@@ -95,21 +105,26 @@ def parse_md_table(lines):
             i += 1
             continue
 
-        # 检测表格行
-        if line.startswith('| TC-'):
-            # 解析表格行
-            cells = [c.strip() for c in line.split('|')]
-            # cells[0] 是空串，cells[1] 是用例ID，...
+        # 读取表头，兼容默认列和用户追加的可选列
+        if line.startswith('|') and '用例ID' in line:
+            column_map = {
+                header: index for index, header in enumerate(split_cells(line))
+            }
+            i += 1
+            continue
+
+        # 检测用例数据行，支持项目自定义的用例 ID 前缀
+        if re.match(r'^\|\s*[A-Za-z]+-\d+', line):
+            cells = split_cells(line)
             if len(cells) >= 8:
-                case_id = cells[1]
-                title = cells[2]
-                preconditions = cells[3]
-                steps_text = cells[4]
-                expected = cells[5]
-                checkpoints = cells[6]
-                scene_type = cells[7]
-                # cells[8] 是优先级（如果存在）
-                priority_text = cells[8] if len(cells) > 8 else ''
+                case_id = get_cell(cells, '用例ID', 0)
+                title = get_cell(cells, '测试点', 1)
+                preconditions = get_cell(cells, '前置条件', 2)
+                steps_text = get_cell(cells, '操作步骤', 3)
+                expected = get_cell(cells, '预期结果', 4)
+                checkpoints = get_cell(cells, '关联检查点', 5)
+                scene_type = get_cell(cells, '场景类型', 6)
+                priority_text = get_cell(cells, '优先级', 7)
 
                 # 解析优先级
                 priority = parse_priority(priority_text, scene_type)

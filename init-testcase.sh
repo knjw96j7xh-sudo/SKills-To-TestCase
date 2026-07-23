@@ -2,9 +2,10 @@
 
 # ============================================================
 # testcase-creator 一键初始化脚本（新版：支持多项目）
-# 用法：./init-testcase.sh <项目名称> <目标路径> [--force]
+# 用法：./init-testcase.sh <项目名称或目录> <目标路径> [--force]
 # 示例：./init-testcase.sh crrc-esg /path/to/your-project
 #       ./init-testcase.sh _template /path/to/new-project
+#       ./init-testcase.sh ./projects/_template ./projects/new-project
 # ============================================================
 
 set -e
@@ -22,23 +23,24 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # ---------- 参数解析 ----------
 FORCE=false
 PROJECT_NAME=""
+PROJECT_INPUT=""
 TARGET_DIR=""
 
 for arg in "$@"; do
   if [ "$arg" == "--force" ]; then
     FORCE=true
-  elif [ -z "$PROJECT_NAME" ]; then
-    PROJECT_NAME="$arg"
+  elif [ -z "$PROJECT_INPUT" ]; then
+    PROJECT_INPUT="$arg"
   elif [ -z "$TARGET_DIR" ]; then
     TARGET_DIR="$arg"
   fi
 done
 
 # ---------- 参数校验 ----------
-if [ -z "$PROJECT_NAME" ]; then
-  echo -e "${RED}[ERROR] 缺少项目名称${NC}"
+if [ -z "$PROJECT_INPUT" ]; then
+  echo -e "${RED}[ERROR] 缺少项目名称或目录${NC}"
   echo ""
-  echo "用法: ./init-testcase.sh <项目名称> <目标路径> [--force]"
+  echo "用法: ./init-testcase.sh <项目名称或目录> <目标路径> [--force]"
   echo ""
   echo "可用的项目:"
   for dir in "$SCRIPT_DIR/projects"/*/; do
@@ -50,11 +52,17 @@ if [ -z "$PROJECT_NAME" ]; then
   exit 1
 fi
 
-# 检查项目是否存在
-PROJECT_DIR="$SCRIPT_DIR/projects/$PROJECT_NAME"
-if [ ! -d "$PROJECT_DIR" ]; then
-  echo -e "${RED}[ERROR] 项目不存在: $PROJECT_NAME${NC}"
+# 解析项目：支持 projects/ 下的名称、相对目录和绝对目录
+if [ -d "$PROJECT_INPUT" ]; then
+  PROJECT_DIR="$(cd "$PROJECT_INPUT" && pwd)"
+elif [ -d "$SCRIPT_DIR/$PROJECT_INPUT" ]; then
+  PROJECT_DIR="$(cd "$SCRIPT_DIR/$PROJECT_INPUT" && pwd)"
+elif [ -d "$SCRIPT_DIR/projects/$PROJECT_INPUT" ]; then
+  PROJECT_DIR="$(cd "$SCRIPT_DIR/projects/$PROJECT_INPUT" && pwd)"
+else
+  echo -e "${RED}[ERROR] 项目不存在: $PROJECT_INPUT${NC}"
   echo ""
+  echo "可传入 projects/ 下的项目名称，或项目资产目录路径。"
   echo "可用的项目:"
   for dir in "$SCRIPT_DIR/projects"/*/; do
     if [ -d "$dir" ]; then
@@ -64,6 +72,8 @@ if [ ! -d "$PROJECT_DIR" ]; then
   done
   exit 1
 fi
+
+PROJECT_NAME="$(basename "$PROJECT_DIR")"
 
 # 处理目标路径
 if [ -n "$TARGET_DIR" ]; then
@@ -142,11 +152,10 @@ copy_item() {
   fi
 }
 
-# ---------- 检查 dist 目录 ----------
-if [ ! -d "$SCRIPT_DIR/dist" ]; then
-  echo -e "${YELLOW}[WARN] dist 目录不存在，正在构建...${NC}"
-  "$SCRIPT_DIR/build.sh"
-fi
+# ---------- 构建最新 Skill ----------
+echo -e "${BLUE}-> 正在构建最新 Skill...${NC}"
+"$SCRIPT_DIR/build.sh" --clean
+echo ""
 
 # ---------- 开始复制 ----------
 echo -e "${BLUE}-> 正在复制 Skill 文件（从 dist/）...${NC}"

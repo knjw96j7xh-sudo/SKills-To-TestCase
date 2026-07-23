@@ -12,6 +12,14 @@
       "width": "auto"
     },
     {
+      "field": "module",
+      "header": "所属模块",
+      "required": true,
+      "editable": true,
+      "description": "功能模块细分；单模块需求填写测试对象，多模块需求填写对应子模块",
+      "width": "auto"
+    },
+    {
       "field": "test_point",
       "header": "测试点",
       "required": true,
@@ -102,7 +110,7 @@
       "header": "备注",
       "required": false,
       "editable": true,
-      "description": "补充说明",
+      "description": "生成用例时固定留空；独立导出已有用例时可保留原备注",
       "width": "auto"
     },
     {
@@ -113,14 +121,6 @@
       "description": "是否适合自动化：是/否/待评估",
       "width": "auto",
       "enum": ["是", "否", "待评估"]
-    },
-    {
-      "field": "module",
-      "header": "所属模块",
-      "required": false,
-      "editable": true,
-      "description": "功能模块细分",
-      "width": "auto"
     }
   ],
 
