@@ -41,106 +41,51 @@
 
 ## 3. 执行导出
 
-> 所有导出文件均写入选定的子目录：`.testcase-assets/history/<选定目录>/`
+> 所有导出文件均写入选定的子目录：`.testcase-assets/history/<选定目录>/`  
+> **主输入是 Markdown 定稿**。Excel/XMind 的 JSON 必须由 `md_to_json.py` 生成，禁止手写整份 `export_data.json`。
 
-### 3a. Jira CSV 导出（若选 J）
-
-- 导出前运行内容质量检查并生成审计摘要；发现 ERROR 时修复定稿后重试：
-  ```bash
-  python3 .testcase-assets/scripts/testcase_quality.py \
-    .testcase-assets/history/<选定目录>/2-用例定稿.md \
-    --audit-output .testcase-assets/history/<选定目录>/audit-summary.md \
-    --strict
-  ```
-- 按 `.testcase-assets/templates/csv-schema.json` 的字段映射规则生成 CSV
-- 运行转换脚本：
-  ```bash
-  python3 .testcase-assets/scripts/md_to_csv.py \
-    .testcase-assets/history/<选定目录>/2-用例定稿.md \
-    .testcase-assets/history/<选定目录>/jira_export.csv
-  ```
-- 编码：UTF-8 with BOM
-- 多步骤用例处理规则：首行填写 序号/标题/描述/优先级/需求/测试用例集，后续步骤行仅填写 步骤ID/步骤/测试数据/期望结果
-- 优先级映射：P0→High, P1→Medium, P2→Low, P3→Low
-- 提示：`[EXPORT] Jira CSV 已生成，请手动导入 Jira 系统。`
-
-### 3b. Excel / XMind 导出（若选 E 或 X）
-
-> **JSON 格式要求**：写入 `export_data.json` 时必须使用**严格 JSON 格式**：
-> - 所有字符串用**双引号** `"` 包裹，禁止单引号 `'`
-> - 对象和数组末尾**禁止尾逗号**（`{"a": 1,}` 是错误的）
-> - 布尔值用 `true`/`false`，空值用 `null`（不是 Python 的 `True`/`False`/`None`）
-> - 中文内容中如含双引号，须转义为 `\"`
-> - 写完后自检：文件内容能通过 Python `json.load()` 解析
-
-**步骤 A — 序列化用例数据**：将定稿用例以如下 JSON 格式写入中间文件 `.testcase-assets/history/<选定目录>/export_data.json`：
-
-```json
-{
-  "meta": {
-    "project": "<从 .testcase-assets/project.config.md 读取项目名称>",
-    "module": "<本次测试模块名>",
-    "generated_at": "<YYYY-MM-DD>"
-  },
-  "testcases": [
-    {
-      "id": "TC-001",
-      "module": "<所属模块>",
-      "test_point": "测试点描述",
-      "precondition": "前置条件",
-      "steps": "1. 步骤一\n2. 步骤二",
-      "expected": "预期结果",
-      "checkpoint": "XX-01",
-      "type": "正向",
-      "priority": "P1",
-      "remark": "<备注；无则为空字符串>"
-    }
-  ]
-}
-```
-
-> **格式说明**：
-> - `module`：每条用例的所属模块；单模块需求填写测试对象，多模块需求填写对应子模块。
-> - `steps`：换行分隔的字符串（`"1. 步骤一\n2. 步骤二"`），供 Excel/XMind 脚本按 `\n` 拆分各步骤。
-> - `priority`：从用例表「优先级」列直接取值（P0/P1/P2/P3）。
-> - `type` 字段值必须为以下之一：`正向` / `异常` / `边界` / `并发`。
-> - `remark`：可选备注；没有内容时写为空字符串。
-
-独立导出已有定稿时允许保留已有备注；不得用审计信息覆盖备注。
-
-**步骤 A2 — 强制自检 JSON 格式**（必须执行，循环直到通过）：
-
-写入完成后，你必须亲自验证 JSON 格式无误。用以下命令检查：
-
-```bash
-python3 -c "import json; json.load(open('.testcase-assets/history/<选定目录>/export_data.json'))" && echo "[OK] JSON valid" || echo "[FAIL] JSON invalid"
-```
-
-- 若输出 `[FAIL] JSON invalid`：**你必须**读取错误信息，自行找出 JSON 中的格式问题（单引号、尾逗号、`None`/`True`/`False` 等），修正文件内容后重新写入，然后**再次运行上述命令**，直到输出 `[OK] JSON valid` 为止。
-- 若输出 `[OK] JSON valid`：继续下一步。
-
-JSON 通过后执行内容质量检查并生成审计摘要：
+### 3a. 内容质量检查（所有导出前）
 
 ```bash
 python3 .testcase-assets/scripts/testcase_quality.py \
-  .testcase-assets/history/<选定目录>/export_data.json \
+  .testcase-assets/history/<选定目录>/2-用例定稿.md \
   --audit-output .testcase-assets/history/<选定目录>/audit-summary.md \
   --strict
 ```
 
-ERROR 级问题（重复 ID、重复步骤编号、核心必填字段为空、非法场景或优先级）必须修复后重试；WARN 级问题保留在审计摘要中，不阻断导出。
+ERROR 级问题须修复定稿后重试；WARN 写入审计摘要，不阻断导出。
 
-> **常见错误自查清单**（按出现频率排序）：
-> 1. 字符串用了单引号 `'`（必须全部用双引号 `"`）
-> 2. 对象 `}` 或数组 `]` 前有多余逗号
-> 3. 中文文本中含未转义的双引号 `"`（须写成 `\"`）
-> 4. 误用了 Python 的 `None`、`True`、`False`（应为 `null`、`true`、`false`）
-> 5. 文件开头有 BOM 字符（保存时须选 "UTF-8 without BOM"）
-> 6. 字符串内包含未转义的真实换行或 Tab（须写成 `\n`、`\t`）
-> 7. 反斜杠未转义，如 Windows 路径 `C:\Users`（须写成 `C:\\Users`）
-> 8. 数字有前导零，如 `001`（应用引号包裹为 `"001"`）
+### 3b. Jira CSV 导出（若选 J）
 
-**步骤 B — 调用导出脚本**：
+```bash
+python3 .testcase-assets/scripts/md_to_csv.py \
+  .testcase-assets/history/<选定目录>/2-用例定稿.md \
+  .testcase-assets/history/<选定目录>/jira_export.csv
+```
+
+- 编码：UTF-8 with BOM
+- 优先级：P0→High, P1→Medium, P2/P3→Low；缺省时并发为 P2/Low
+- 多步骤：首行填基础信息，后续行填步骤
+- 提示：`[EXPORT] Jira CSV 已生成，请手动导入 Jira 系统。`
+
+### 3c. Excel / XMind 导出（若选 E 或 X）
+
+**步骤 A — MD 转 JSON（必须用脚本）**
+
+从 `.testcase-assets/project.config.md` 读取项目名称：
+
+```bash
+python3 .testcase-assets/scripts/md_to_json.py \
+  .testcase-assets/history/<选定目录>/2-用例定稿.md \
+  .testcase-assets/history/<选定目录>/export_data.json \
+  --project "<项目名称>" \
+  --module "<测试对象或模块名>"
+```
+
+独立导出**允许保留定稿中已有备注**；不得用审计信息覆盖备注。  
+脚本失败时修正 **Markdown 定稿表** 后重跑，不要手写 JSON。
+
+**步骤 B — 调用导出脚本**
 
 - 若选 **E**（Excel）：
   ```bash
@@ -156,16 +101,7 @@ ERROR 级问题（重复 ID、重复步骤编号、核心必填字段为空、�
     .testcase-assets/history/<选定目录>/testcases.xmind
   ```
 
-**步骤 C — 确认输出**：脚本执行后，输出文件路径并提示用户：
-
-```text
-[OK] 文件已生成：
-  Excel → .testcase-assets/history/<选定目录>/testcases.xlsx
-  XMind → .testcase-assets/history/<选定目录>/testcases.xmind
-[TIP] XMind 文件需 XMind 8 或更高版本打开。
-```
-
-若生成了 Excel，再次运行公式检查并更新同一审计摘要：
+**步骤 C — Excel 公式审计（若生成了 xlsx）**
 
 ```bash
 python3 .testcase-assets/scripts/testcase_quality.py \
@@ -173,6 +109,15 @@ python3 .testcase-assets/scripts/testcase_quality.py \
   --audit-output .testcase-assets/history/<选定目录>/audit-summary.md \
   --xlsx .testcase-assets/history/<选定目录>/testcases.xlsx \
   --strict
+```
+
+**步骤 D — 确认输出**
+
+```text
+[OK] 文件已生成：
+  Excel → .testcase-assets/history/<选定目录>/testcases.xlsx
+  XMind → .testcase-assets/history/<选定目录>/testcases.xmind
+[TIP] XMind 文件需 XMind 8 或更高版本打开。
 ```
 
 ---
@@ -189,5 +134,4 @@ python3 .testcase-assets/scripts/testcase_quality.py \
   审计摘要 → .testcase-assets/history/<选定目录>/audit-summary.md
 
 [TIP] 可再次运行 /testcase-export 导出其他格式。
-[TOKEN] 本次会话结束时，请留意终端底部的 token 消耗统计。
 ```

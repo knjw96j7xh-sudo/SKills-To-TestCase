@@ -6,7 +6,8 @@
 
 按阶段读取以下文件，不要一次性加载全部 reference：
 
-- 进入阶段 1 前，完整读取 `references/testcase-creator/input-and-generation.md`。
+- 选择「全量新建」并进入阶段 1 前，完整读取 `references/testcase-creator/input-and-generation.md`。
+- 选择「增量变更」后，完整读取 `references/testcase-creator/change-workflow.md`。
 - 进入阶段 4 前，完整读取 `references/testcase-creator/review-workflow.md`。
 - 进入阶段 5 前，完整读取 `references/testcase-creator/export-workflow.md`。
 
@@ -28,19 +29,21 @@ reference 中的要求是本流程的一部分，读取后必须执行，不得�
 请先完善配置，再重新触发 /testcase-creator。
 ```
 
-5. 初始化通过后输出：
+5. 初始化通过后输出资产加载成功信息，并询问运行模式：
 
 ```text
-[OK] 资产加载成功
-[DIR] 检查点索引：.testcase-assets/checkpoints-index.md
-[DIR] 评审点索引：.testcase-assets/review-expectations-index.md
-[DIR] 项目配置：.testcase-assets/project.config.md（已载入上下文）
->> 开始用例生成流程，共 5 个阶段，每步需您确认后继续。
+【运行模式】
+A. 全量新建（完整五阶段）
+B. 增量变更（基于历史定稿做补/改/废）
 ```
 
-每个阶段结束时记录终端累计 token，阶段 5 汇总各阶段差值。
+用户也可自然语言直达，例如「增量改…」→ 模式 B。  
+模式 B：完整读取并执行 `references/testcase-creator/change-workflow.md`，完成后进入阶段 4 或 5。  
+模式 A：继续下方阶段 1–5。
 
-## 1. 需求与设计输入（阶段 1/5）
+Token 统计：能读到终端累计值时各阶段可记录；读不到则跳过，不阻断流程。
+
+## 1. 需求与设计输入（阶段 1/5）— 全量模式
 
 进入本阶段前完整读取 `references/testcase-creator/input-and-generation.md` 的“阶段 1”。
 
@@ -49,67 +52,60 @@ reference 中的要求是本流程的一部分，读取后必须执行，不得�
 3. 输出需求要素、设计要素及两者差异，等待用户明确回复“确认”。
 4. 确认后清理模块名中的文件系统非法字符，创建：
    `.testcase-assets/history/<YYYYMMDD>_<HHMMSS>_<模块名>/`。
-5. 后续文件全部写入该运行目录，记录阶段 1 token 基线。
+5. 后续文件全部写入该运行目录。
 
 不得用设计稿覆盖文字需求；发现冲突时必须列为待确认项。
 
-## 2. 输入结构化（阶段 2/5）
+## 2. 输入结构化（阶段 2/5）— 全量模式
 
-触发条件：用户确认阶段 1 解析结果。
+触发条件：用户确认阶段 1 解析结果。细则见 `input-and-generation.md` 阶段 2（含 2a 检查点推荐、2b 历史复用）。
 
-1. 按分类完整展示 `.testcase-assets/checkpoints-index.md` 中的检查点。
-2. 接受编号列表、“全选”或“跳过”。
-3. 生成需求要素、设计要素、差异项和已关联检查点摘要。
+1. **2a 检查点**：展示索引全部分类，并给出推荐预勾；接受编号列表、「采用推荐」、「全选」或「跳过」。不得静默替用户选定。
+2. **2b 历史复用（可选）**：扫描近期 history 定稿，列出候选供勾选，或「跳过」。不得未经勾选整表复制历史。增量模式不做 2b。
+3. 生成需求要素、设计要素、差异项、已关联检查点、复用映射摘要。
 4. 写入 `<运行目录>/0-用例准备.md`。
-5. 等待用户回复“生成用例”，记录阶段 2 token 基线。
+5. 等待用户回复“生成用例”。
 
-具体提示和输出模板见 `references/testcase-creator/input-and-generation.md` 的“阶段 2”。
-
-## 3. 用例生成（阶段 3/5）
+## 3. 用例生成（阶段 3/5）— 全量模式
 
 触发条件：用户回复“生成用例”。进入本阶段时读取 `references/testcase-creator/input-and-generation.md` 的“阶段 3”。
 
 1. 读取 `.testcase-assets/templates/testcase-table-config.json`；缺失时使用默认 9 列。
 2. 仅在用户主动要求时加入可选列。
-3. 基于需求、设计、差异结论和检查点生成正向、异常、边界、并发用例。
-4. 单模块需求的“所属模块”统一填写测试对象，多模块需求填写对应子模块。
-5. 写入 `<运行目录>/1-评审记要.md`，等待用户进入评审或提出修改。
+3. 若阶段 2 勾选了历史复用：本轮统一重新编号，映射写入准备文档；只为未覆盖规则/检查点/场景补新用例。
+4. 基于需求、设计、差异结论和检查点生成正向、异常、边界、并发用例。
+5. 单模块需求的“所属模块”统一填写测试对象，多模块需求填写对应子模块。
+6. 写入 `<运行目录>/1-评审记要.md`，等待用户进入评审或提出修改。
 
-**备注列强制规则**：生成用例的“备注”必须为空。不得写入来源 ID、历史备注、评审结论、检查点说明或追踪信息；过程信息写入评审报告或审计摘要。
+**备注列强制规则**：生成用例的“备注”必须为空。不得写入来源 ID、历史备注、评审结论、检查点说明、复用映射或追踪信息；过程信息写入准备文档、评审报告或审计摘要。
 
 ## 4. 评审优化（阶段 4/5）
 
-触发条件：用户回复“进入评审”。进入本阶段前完整读取 `references/testcase-creator/review-workflow.md`。
+触发条件：用户回复“进入评审”（全量或增量均可）。进入本阶段前完整读取 `references/testcase-creator/review-workflow.md`。
 
 1. 展示评审点并按 UX、DATA、COMP、EXEC、BUG、SEC、PERF 等分类分组。
 2. 第 1 轮全量评审；第 2 轮起仅展开新增或修改用例，已有用例只提供摘要。
-3. 每个选中维度使用一个独立 subagent 并行评审，每个 subagent 只接收该维度评审点。
-4. 合并覆盖结论、去重补充建议，分别写入：
+3. 每个选中维度优先使用独立 subagent 并行评审；环境不支持并行时，在同一会话内按维度**串行**评审，输出格式不变。
+4. 每个维度只接收该维度评审点，不混入其他维度。
+5. 合并覆盖结论、去重补充建议，分别写入：
    - `<运行目录>/1-评审报告-第N轮.md`
    - `<运行目录>/1-评审记要.md`（只保留最终用例表）
-5. 用户选择 A/B/C/D 时合并修改并进入下一轮增量评审；选择 E 时进入阶段 5。
+6. 用户选择 A/B/C/D 时合并修改并进入下一轮增量评审；选择 E 时进入阶段 5。
 
 不得跳过用户决策或把历轮评审内容混入最终用例表。
 
 ## 5. 定稿导出（阶段 5/5）
 
-触发条件：用户确认评审通过。进入本阶段前完整读取 `references/testcase-creator/export-workflow.md`。
+触发条件：用户确认评审通过，或增量模式选择跳过评审。进入本阶段前完整读取 `references/testcase-creator/export-workflow.md`。
 
-1. 写入 `<运行目录>/2-用例定稿.md`。
+1. 写入 `<运行目录>/2-用例定稿.md`（增量须含变更摘要）。
 2. 询问导出平台：Jira CSV、Excel、XMind 或不导出。
-3. 导出前必须运行内容质量检查，并生成 `<运行目录>/audit-summary.md`：
-
-```bash
-python3 .testcase-assets/scripts/testcase_quality.py \
-  <输入文件> --audit-output <运行目录>/audit-summary.md --strict
-```
-
-4. 质检失败时修复用例数据并重新运行，直到通过；警告项必须写入审计摘要，但不阻断导出。
-5. Excel 生成后再次传入 `--xlsx <运行目录>/testcases.xlsx` 更新公式检查结果。
-6. 所有新生成用例的 `remark` 必须是空字符串。替换或合并已有 Excel 时，仅保留非目标模块原有备注。
-7. 更新 `history-index.md`，输出文件路径、用例统计、审计摘要和 token 汇总。
-
-具体 JSON 结构、校验顺序、导出命令和完成模板见 `references/testcase-creator/export-workflow.md`。
+3. 导出前必须运行内容质量检查，并生成 `<运行目录>/audit-summary.md`。
+4. Excel/XMind 必须先用 `md_to_json.py` 从定稿生成 `export_data.json`，禁止 Agent 手写整份 JSON。
+5. 质检失败时修复用例数据并重新运行，直到通过；警告项必须写入审计摘要，但不阻断导出。
+6. Excel 生成后再次传入 `--xlsx` 更新公式检查结果。
+7. 所有新生成用例的 `remark` 必须是空字符串。替换或合并已有 Excel 时，仅保留非目标模块原有备注。
+8. 更新 `history-index.md`，输出文件路径、用例统计、审计摘要；token 能汇总则汇总。
 
 ## 6. 资产沉淀（可选）
 
@@ -121,16 +117,20 @@ python3 .testcase-assets/scripts/testcase_quality.py \
 4. 追加到对应分类末尾，不覆盖、不重排既有编号，并记录日期和来源。
 5. 输出追加内容预览。
 
+也可从缺陷列表提炼 `BUG-xx` 评审点或检查点后走本流程。
+
 ## 文件约定
 
 运行目录为 `.testcase-assets/history/<YYYYMMDD>_<HHMMSS>_<模块名>/`，其中：
 
 | 文件 | 说明 |
 |------|------|
-| `0-用例准备.md` | 需求、设计和检查点结构化结果 |
+| `0-用例准备.md` | 全量：需求、设计、检查点、复用映射 |
+| `0-变更分析.md` | 增量：变更影响分析 |
+| `1-变更集.md` | 增量：新增/修改/废弃表 |
 | `1-评审记要.md` | 最终用例表，不含历轮评审记录 |
 | `1-评审报告-第N轮.md` | 每轮独立评审报告 |
 | `2-用例定稿.md` | 最终定稿用例表 |
-| `export_data.json` | Excel/XMind 中间数据 |
+| `export_data.json` | 由 `md_to_json.py` 从定稿生成 |
 | `audit-summary.md` | 内容质量与交付审计摘要 |
 | `jira_export.csv` / `testcases.xlsx` / `testcases.xmind` | 对应导出文件 |

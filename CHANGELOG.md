@@ -4,6 +4,39 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.9.0] - 2026-08-13
+
+### Added
+
+- **增量变更模式（testcase-creator）**
+  - 启动时可选「全量新建 / 增量变更」
+  - 新增 `references/change-workflow.md`：选基线定稿 → 变更输入 → 影响分析确认 → 补/改/废变更集 → 合并全表
+  - 新增编号续号、修改保号、废弃不进有效表、history-index 标注 `mode: 增量`
+- **检查点推荐与历史复用（全量阶段 2）**
+  - 2a：按域/关键词预推荐检查点，快捷「采用推荐」，须人确认
+  - 2b：扫描近期 history 定稿供勾选复用；本轮重编号，映射写入 `0-用例准备.md`
+- **MD→脚本导出链路**
+  - 新增 `framework/scripts/testcase_common.py`：共用 MD 解析、优先级规则、排序、JSON 容错加载
+  - 新增 `framework/scripts/md_to_json.py`：定稿 MD 生成 `export_data.json`
+  - Excel/XMind 主路径改为 `md_to_json`，禁止 Agent 手写整份 JSON
+
+### Changed
+
+- 并发缺省优先级与文档对齐：场景「并发」→ **P2**，Jira 映射 **Low**（修复 `md_to_csv` 误映射为 High）
+- `md_to_csv` / `testcase_quality` / `export_excel` / `export_xmind` 共用 `testcase_common`
+- 评审支持无 subagent 时按维度串行降级；token 统计改为可读则记、读不到不阻断
+- testcase-creator 升级至 **1.9.0**，testcase-export 升级至 **1.6.0**
+
+### Tests
+
+- 新增 `tests/test_export_pipeline.py`（MD→JSON/CSV、优先级、Skill 契约）
+- 修正 pytest 将 `testcase` 工厂函数误识别为测试用例的问题
+
+### Docs
+
+- `README.md`：运行模式 A/B、增量摘要、history 文件约定、MD 导出命令与脚本表；流程图注明以正文为准
+- `TESTCASE_GUIDE.md`：对齐 1.9（模式选择、增量 B1–B4、检查点推荐/历史复用、MD 主路径导出与话术）
+
 ## [1.8.0] - 2026-07-23
 
 ### Added

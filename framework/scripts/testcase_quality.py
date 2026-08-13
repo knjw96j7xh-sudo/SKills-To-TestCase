@@ -1,42 +1,30 @@
 #!/usr/bin/env python3
 """检查测试用例内容质量并生成交付审计摘要。"""
 
+from __future__ import annotations
+
 import argparse
 import json
 import re
+import sys
 from collections import Counter
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
+_SCRIPTS_DIR = Path(__file__).resolve().parent
+if str(_SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS_DIR))
 
-FIELDS = (
-    "id",
-    "module",
-    "test_point",
-    "precondition",
-    "steps",
-    "expected",
-    "checkpoint",
-    "type",
-    "priority",
-    "remark",
+from testcase_common import (
+    FIELDS,
+    VALID_PRIORITIES,
+    VALID_TYPES,
+    load_cases,
+    text,
 )
+
 HARD_REQUIRED = ("id", "module", "test_point", "steps", "expected", "type", "priority")
-HEADER_TO_FIELD = {
-    "用例ID": "id",
-    "所属模块": "module",
-    "测试点": "test_point",
-    "前置条件": "precondition",
-    "操作步骤": "steps",
-    "预期结果": "expected",
-    "关联检查点": "checkpoint",
-    "场景类型": "type",
-    "优先级": "priority",
-    "备注": "remark",
-}
-VALID_TYPES = {"正向", "异常", "边界", "并发"}
-VALID_PRIORITIES = {"P0", "P1", "P2", "P3"}
 FUZZY_PATTERNS = (
     (re.compile(r"正常(?:显示|处理|运行|返回|完成|保存|提交|跳转)?"), "“正常”缺少可验证标准"),
     (re.compile(r"正确(?:显示|返回|处理|保存|计算)?"), "“正确”缺少明确结果"),
@@ -56,66 +44,6 @@ class Issue:
     case_id: str
     field: str
     message: str
-
-
-def _text(value) -> str:
-    return "" if value is None else str(value).strip()
-
-
-def load_json_cases(path: Path) -> tuple[dict, list[dict]]:
-    with path.open("r", encoding="utf-8-sig") as handle:
-        data = json.load(handle)
-    if isinstance(data, list):
-        data = {"testcases": data}
-    if not isinstance(data, dict) or not isinstance(data.get("testcases", []), list):
-        raise ValueError("JSON 顶层必须是对象，且 testcases 必须是数组")
-    return data.get("meta", {}), data.get("testcases", [])
-
-
-def _split_markdown_row(line: str) -> list[str]:
-    return [cell.strip().replace("<br>", "\n") for cell in line.strip().strip("|").split("|")]
-
-
-def load_markdown_cases(path: Path) -> tuple[dict, list[dict]]:
-    lines = path.read_text(encoding="utf-8-sig").splitlines()
-    column_map: dict[int, str] = {}
-    cases: list[dict] = []
-    title = ""
-
-    for line in lines:
-        stripped = line.strip()
-        if stripped.startswith("## ") and not title:
-            title = stripped[3:].strip()
-        if stripped.startswith("|") and "用例ID" in stripped:
-            headers = _split_markdown_row(stripped)
-            column_map = {
-                index: HEADER_TO_FIELD[header]
-                for index, header in enumerate(headers)
-                if header in HEADER_TO_FIELD
-            }
-            continue
-        if not column_map or not stripped.startswith("|"):
-            continue
-        cells = _split_markdown_row(stripped)
-        case_id_index = next((index for index, field in column_map.items() if field == "id"), None)
-        if case_id_index is None or case_id_index >= len(cells):
-            continue
-        if not re.fullmatch(r"[A-Za-z]+-\d+[A-Za-z]*", cells[case_id_index]):
-            continue
-        case = {field: cells[index] if index < len(cells) else "" for index, field in column_map.items()}
-        cases.append(case)
-
-    if not column_map:
-        raise ValueError("Markdown 中未找到包含“用例ID”的表头")
-    return {"project": title, "module": title}, cases
-
-
-def load_cases(path: Path) -> tuple[dict, list[dict]]:
-    if path.suffix.lower() == ".json":
-        return load_json_cases(path)
-    if path.suffix.lower() == ".md":
-        return load_markdown_cases(path)
-    raise ValueError("仅支持 .json 或 .md 输入")
 
 
 def _numbering_issues(case_id: str, steps: str, expected: str) -> list[Issue]:
@@ -172,30 +100,30 @@ def _quote_issues(case_id: str, fields: list[tuple[str, str]]) -> list[Issue]:
 
 def inspect_cases(cases: list[dict]) -> list[Issue]:
     issues: list[Issue] = []
-    ids = [_text(case.get("id")) for case in cases]
+    ids = [text(case.get("id")) for case in cases]
     duplicate_ids = {case_id for case_id, count in Counter(ids).items() if case_id and count > 1}
 
     for index, case in enumerate(cases, start=1):
-        case_id = _text(case.get("id")) or f"第{index}行"
+        case_id = text(case.get("id")) or f"第{index}行"
         if case_id in duplicate_ids:
             issues.append(Issue("ERROR", "DUPLICATE_ID", case_id, "id", "用例 ID 重复"))
         for field in HARD_REQUIRED:
-            if not _text(case.get(field)):
+            if not text(case.get(field)):
                 issues.append(Issue("ERROR", "REQUIRED_EMPTY", case_id, field, "核心必填字段为空"))
-        if not _text(case.get("checkpoint")):
+        if not text(case.get("checkpoint")):
             issues.append(Issue("WARN", "CHECKPOINT_EMPTY", case_id, "checkpoint", "未关联检查点"))
 
-        case_type = _text(case.get("type"))
-        priority = _text(case.get("priority"))
+        case_type = text(case.get("type"))
+        priority = text(case.get("priority"))
         if case_type and case_type not in VALID_TYPES:
             issues.append(Issue("ERROR", "INVALID_TYPE", case_id, "type", f"非法场景类型：{case_type}"))
         if priority and priority not in VALID_PRIORITIES:
             issues.append(Issue("ERROR", "INVALID_PRIORITY", case_id, "priority", f"非法优先级：{priority}"))
 
-        steps = _text(case.get("steps"))
-        expected = _text(case.get("expected"))
+        steps = text(case.get("steps"))
+        expected = text(case.get("expected"))
         issues.extend(_numbering_issues(case_id, steps, expected))
-        text_fields = [(field, _text(case.get(field))) for field in ("test_point", "precondition", "steps", "expected")]
+        text_fields = [(field, text(case.get(field))) for field in ("test_point", "precondition", "steps", "expected")]
         for field, value in text_fields:
             issues.extend(_wording_issues(case_id, field, value))
         issues.extend(_quote_issues(case_id, text_fields))
@@ -226,7 +154,7 @@ def inspect_workbook(path: Path) -> tuple[int, list[str]]:
 
 
 def _distribution(cases: list[dict], field: str, empty_label: str = "（空）") -> Counter:
-    return Counter(_text(case.get(field)) or empty_label for case in cases)
+    return Counter(text(case.get(field)) or empty_label for case in cases)
 
 
 def _table(counter: Counter, first_header: str) -> list[str]:
@@ -245,8 +173,10 @@ def render_audit(
     formula_errors = formula_errors or []
     modules = _distribution(cases, "module")
     scenes = _distribution(cases, "type")
-    blanks = Counter({field: sum(not _text(case.get(field)) for case in cases) for field in FIELDS})
-    duplicates = sorted(case_id for case_id, count in _distribution(cases, "id").items() if case_id != "（空）" and count > 1)
+    blanks = Counter({field: sum(not text(case.get(field)) for case in cases) for field in FIELDS})
+    duplicates = sorted(
+        case_id for case_id, count in _distribution(cases, "id").items() if case_id != "（空）" and count > 1
+    )
     severity_counts = Counter(issue.severity for issue in issues)
 
     lines = [
@@ -288,7 +218,9 @@ def render_audit(
         lines.extend(["| 级别 | 规则 | 用例 | 字段 | 说明 |", "|---|---|---|---|---|"])
         for issue in issues:
             message = issue.message.replace("|", "\\|")
-            lines.append(f"| {issue.severity} | {issue.code} | {issue.case_id} | {issue.field} | {message} |")
+            lines.append(
+                f"| {issue.severity} | {issue.code} | {issue.case_id} | {issue.field} | {message} |"
+            )
     else:
         lines.append("- 未发现问题")
     lines.extend(["", "## Excel 公式检查", ""])

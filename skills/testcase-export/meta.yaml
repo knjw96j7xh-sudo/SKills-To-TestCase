@@ -1,6 +1,6 @@
 name: testcase-export
-description: "独立导出命令，从已定稿的用例文件导出为 Jira CSV / Excel / XMind 格式"
-version: "1.5.0"
+description: "独立导出命令，从已定稿 Markdown 经脚本生成 Jira CSV / Excel / XMind（MD→质检/JSON→导出）"
+version: "1.6.0"
 
 platforms:
   claude:

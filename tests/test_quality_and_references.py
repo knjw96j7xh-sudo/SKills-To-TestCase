@@ -16,7 +16,7 @@ sys.modules[SPEC.name] = QUALITY
 SPEC.loader.exec_module(QUALITY)
 
 
-def testcase(**overrides):
+def make_testcase(**overrides):
     case = {
         "id": "TC-001",
         "module": "用户中心",
@@ -36,8 +36,8 @@ def testcase(**overrides):
 class QualityCheckTest(unittest.TestCase):
     def test_detects_blocking_and_warning_rules(self):
         cases = [
-            testcase(expected='1. 正常显示“姓名”\n2. 点击button后提示"成功"'),
-            testcase(type="未知", steps="1. 输入\n1. 保存"),
+            make_testcase(expected='1. 正常显示“姓名”\n2. 点击button后提示"成功"'),
+            make_testcase(type="未知", steps="1. 输入\n1. 保存"),
         ]
 
         issues = QUALITY.inspect_cases(cases)
@@ -56,7 +56,7 @@ class QualityCheckTest(unittest.TestCase):
             input_path = temp_path / "cases.json"
             audit_path = temp_path / "audit-summary.md"
             input_path.write_text(
-                json.dumps({"testcases": [testcase(expected="结果正确")]}, ensure_ascii=False),
+                json.dumps({"testcases": [make_testcase(expected="结果正确")]}, ensure_ascii=False),
                 encoding="utf-8",
             )
 
@@ -81,7 +81,7 @@ class QualityCheckTest(unittest.TestCase):
             self.assertIn("FUZZY_WORDING", audit)
 
             input_path.write_text(
-                json.dumps({"testcases": [testcase(priority="紧急")]}, ensure_ascii=False),
+                json.dumps({"testcases": [make_testcase(priority="紧急")]}, ensure_ascii=False),
                 encoding="utf-8",
             )
             error_result = subprocess.run(
@@ -129,20 +129,24 @@ class PromptReferencesTest(unittest.TestCase):
     def test_main_prompt_is_short_and_routes_all_references(self):
         skill_dir = ROOT / "skills/testcase-creator"
         prompt = (skill_dir / "prompt.md").read_text(encoding="utf-8")
-        self.assertLess(len(prompt.splitlines()), 200)
-        for name in ("input-and-generation.md", "review-workflow.md", "export-workflow.md"):
+        self.assertLess(len(prompt.splitlines()), 220)
+        for name in (
+            "input-and-generation.md",
+            "change-workflow.md",
+            "review-workflow.md",
+            "export-workflow.md",
+        ):
             self.assertIn(f"references/testcase-creator/{name}", prompt)
             self.assertTrue((skill_dir / "references" / name).is_file())
 
     def test_locked_dependencies_match_runtime_installers(self):
         lock = (ROOT / "requirements.lock").read_text(encoding="utf-8")
-        excel = (ROOT / "framework/scripts/export_excel.py").read_text(encoding="utf-8")
-        xmind = (ROOT / "framework/scripts/export_xmind.py").read_text(encoding="utf-8")
+        common = (ROOT / "framework/scripts/testcase_common.py").read_text(encoding="utf-8")
         for requirement in ("PyYAML==6.0.3", "json-repair==0.61.2", "openpyxl==3.1.5"):
             self.assertIn(requirement, lock)
-        self.assertIn('"json-repair": "0.61.2"', excel)
-        self.assertIn('"openpyxl": "3.1.5"', excel)
-        self.assertIn('"json-repair": "0.61.2"', xmind)
+        self.assertIn('"json-repair": "0.61.2"', common)
+        self.assertIn('"openpyxl": "3.1.5"', common)
+        self.assertIn('"PyYAML": "6.0.3"', common)
 
 
 if __name__ == "__main__":

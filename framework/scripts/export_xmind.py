@@ -30,72 +30,22 @@ Sheet 2：统计总览
 import sys
 import re
 import json
-import subprocess
-from importlib.metadata import PackageNotFoundError, version
 import zipfile
 import uuid
 from datetime import datetime, timezone
 from collections import defaultdict
+from pathlib import Path
 
+_SCRIPTS_DIR = Path(__file__).resolve().parent
+if str(_SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS_DIR))
 
-# --- 依赖自动安装（版本与仓库 requirements.lock 一致）---------------
-
-PINNED_DEPENDENCIES = {
-    "json-repair": "0.61.2",
-}
-
-def _ensure(package: str, import_name: str = None):
-    """自动安装缺失的 Python 依赖。"""
-    if import_name is None:
-        import_name = package.replace("-", "_")
-    expected = PINNED_DEPENDENCIES[package]
-    requirement = f"{package}=={expected}"
-    try:
-        if version(package) == expected:
-            __import__(import_name)
-            return
-    except (ImportError, PackageNotFoundError):
-        pass
-
-    try:
-        print(f"[INSTALL] 正在安装 {requirement} ...")
-        subprocess.check_call(
-            [sys.executable, "-m", "pip", "install", requirement, "-q"],
-            stdout=subprocess.DEVNULL,
-        )
-        print(f"[INSTALL] {requirement} 安装完成")
-    except subprocess.CalledProcessError as error:
-        raise RuntimeError(f"无法安装锁定依赖 {requirement}") from error
-
-
-_ensure("json-repair")
-from json_repair import repair_json
-
-
-# --- 容错 JSON 加载 ----------------------------------------------------
-
-def load_json_robust(filepath: str) -> dict:
-    """加载 JSON 文件，使用 json_repair 兼容 LLM 常见格式错误。"""
-    with open(filepath, "r", encoding="utf-8") as fh:
-        raw = fh.read()
-
-    if not raw.strip():
-        raise ValueError(f"文件为空: {filepath}")
-
-    # 快速路径：标准 JSON
-    try:
-        data = json.loads(raw)
-        if isinstance(data, (dict, list)):
-            return data if isinstance(data, dict) else {"testcases": data}
-    except json.JSONDecodeError:
-        pass
-
-    # 修复路径
-    repaired = repair_json(raw)
-    data = json.loads(repaired)
-    if isinstance(data, (dict, list)):
-        return data if isinstance(data, dict) else {"testcases": data}
-    raise ValueError(f"修复后的 JSON 格式异常: {type(data).__name__}")
+from testcase_common import (
+    TYPE_ORDER,
+    TYPE_PRIORITY,
+    case_sort_key,
+    load_json_robust,
+)
 
 # ─── 颜色常量 ──────────────────────────────────────────────────────────────────
 
@@ -121,17 +71,6 @@ DETAIL_COLOR = {
     "step":         "#4E342E",  # 深棕（步骤节点）
     "expected":     "#1A237E",  # 深靛蓝
 }
-
-TYPE_ORDER = ["正向", "异常", "边界", "并发"]
-
-# 优先级默认映射
-TYPE_PRIORITY = {
-    "正向": "P1",
-    "异常": "P0",
-    "边界": "P1",
-    "并发": "P2",
-}
-
 
 # ─── 节点工厂 ──────────────────────────────────────────────────────────────────
 
@@ -200,14 +139,7 @@ def build_testcase_sheet(data: dict) -> dict:
     testcases    = data.get("testcases", [])
 
     # 按用例ID排序（TC-001 < TC-001a < TC-002）
-    def _sort_key(tc):
-        tid = tc.get("id", "")
-        match = re.match(r"TC-(\d+)([a-z]*)", tid, re.IGNORECASE)
-        if match:
-            return (int(match.group(1)), match.group(2).lower())
-        return (99999, tid)
-
-    testcases.sort(key=_sort_key)
+    testcases.sort(key=lambda tc: case_sort_key(tc.get("id", "")))
 
     # 第一层：按检查点分组
     cp_groups: dict[str, list] = defaultdict(list)
@@ -237,7 +169,7 @@ def build_testcase_sheet(data: dict) -> dict:
             for tc in tc_list:
                 tc_id    = tc.get("id", "TC-?")
                 tc_point = tc.get("test_point", "")
-                priority = TYPE_PRIORITY.get(tc_type, "P2")
+                priority = tc.get("priority") or TYPE_PRIORITY.get(tc_type, "P2")
 
                 # 第四层：细节节点
                 detail_children = []

@@ -25,7 +25,7 @@ class RemarkPolicyTest(unittest.TestCase):
         )
 
         self.assertIn("**备注列强制规则**", prompt)
-        self.assertIn('"remark": ""', export_reference)
+        self.assertIn("md_to_json.py", export_reference)
         self.assertIn("assert all(tc.get('remark', '') == ''", export_reference)
         self.assertIn("生成用例时固定留空", remark_column["description"])
 

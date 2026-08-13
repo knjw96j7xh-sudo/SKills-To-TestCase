@@ -10,7 +10,7 @@
 ./init-testcase.sh _template .                # 构建最新 Skill 并初始化到当前目录
 ```
 
-然后在 Claude Code 或 Cursor 中输入 `/testcase-creator`，按提示走完五阶段流程。
+然后在 Claude Code 或 Cursor 中输入 `/testcase-creator`，先选运行模式（全量新建或增量变更），再按提示完成流程。
 
 > 初始化脚本每次都会重新构建 `dist/`，确保部署的是最新 Skill。仅需生成各平台产物、不执行初始化时，可单独运行 `./build.sh`。
 
@@ -38,7 +38,7 @@
 │   └── testcase-export/           #   meta.yaml + prompt.md
 ├── framework/                     # 通用框架（与业务无关）
 │   ├── templates/                 #   用例表模板、列配置、CSV Schema
-│   └── scripts/                   #   导出脚本（Excel / XMind / CSV）
+│   └── scripts/                   #   导出/质检脚本（MD→JSON/CSV/Excel/XMind）
 ├── projects/                      # 项目资产（按项目隔离）
 │   ├── _template/                 #   新项目模板
 │   └── <your-project>/            #   你的项目（project.config + checkpoints + reviews）
@@ -70,40 +70,61 @@ python3 check_project_copies.py --strict  # CI 检查，发现漂移返回失败
 
 | 命令 | 平台 | 用途 |
 |------|------|------|
-| `/testcase-creator` | Claude Code / Cursor | 完整五阶段用例生成 |
-| `/testcase-export` | Claude Code / Cursor | 从已有定稿导出，不重走流程 |
+| `/testcase-creator` | Claude Code / Cursor | 全量五阶段生成，或基于定稿的增量变更（补/改/废） |
+| `/testcase-export` | Claude Code / Cursor | 从已有定稿导出（MD→质检/JSON→Jira CSV / Excel / XMind） |
 | `source-command-testcase-creator` | Codex | 同上（Agent 技能） |
 | `source-command-testcase-export` | Codex | 同上（Agent 技能） |
 
 ---
 
-## 五阶段流程
+## 运行模式与流程
 
 ![用例生成 Skill 流程图](assets/testcase-skill-flow.png)
 
-### 1. 需求与设计输入
+> 上图仍以全量五阶段为主示意；**增量模式、检查点推荐、历史复用与 MD 导出链路以本文说明为准**（图可后续再换）。
+
+触发 `/testcase-creator` 并通过初始化检查后，先选择运行模式：
+
+| 模式 | 说明 |
+|------|------|
+| **A. 全量新建** | 完整五阶段：输入 → 结构化 → 生成 → 评审 → 定稿导出 |
+| **B. 增量变更** | 基于历史 `2-用例定稿.md`：变更输入 → 影响分析 → 补/改/废 → 合并全表 → 评审或定稿 |
+
+也可自然语言直达，例如「增量改一下组织树」→ 模式 B。
+
+### 增量变更（模式 B）摘要
+
+1. 从 `history/` 选择基线定稿  
+2. 只输入**本次变更**（可组合 A–H 来源与设计稿）  
+3. 输出影响分析，确认后再生成变更集  
+4. **新增**续号、**修改**保号、**废弃**不进有效表（摘要中保留清单）  
+5. 合并为完整有效表后，可进入评审或直接定稿导出；`history-index` 标注 `mode: 增量`
+
+### 全量：1. 需求与设计输入
 
 支持八种来源：文字粘贴 / 乐享链接 / 接口文档 / 本地文件（md/docx/pdf）/ 图片或截图 / 飞书文档 / Excel 需求列表 / Jira/Tapd/禅道链接。
 
 设计稿请先导出为 PDF 或图片，可与任一需求来源组合输入。阶段一会分别提取测试对象、业务规则、页面流程、组件字段、交互状态和校验反馈，并标记需求与设计之间的缺失、冲突及补充项。确认后创建运行子目录。
 
-### 2. 输入结构化
+### 全量：2. 输入结构化
 
-读取 `checkpoints-index.md`，展示所有分类和检查点，用户选择关联编号，写入 `0-用例准备.md`。
+- **检查点**：展示索引，并按需求/设计做推荐预勾；可「采用推荐 / 全选 / 自选 / 跳过」（须人确认）。
+- **历史复用（可选）**：扫描近期 history 定稿，勾选后复用内容；本轮重新编号，映射写入 `0-用例准备.md`。
+- 结果写入 `0-用例准备.md`。
 
-### 3. 用例生成
+### 全量：3. 用例生成
 
-基于需求要素 + 设计稿要素（如有）+ 检查点，生成覆盖正向/异常/边界/并发四类的用例表，包含优先级列（P0-P3）。
+基于需求要素 + 设计稿要素（如有）+ 检查点（+ 可选历史复用），生成覆盖正向/异常/边界/并发四类的用例表，包含优先级列（P0-P3）。
 
 > P0=异常场景（阻断） / P1=正向主流程/边界 / P2=并发 / P3=体验类
 
 ### 4. 评审优化
 
-按 UX/DATA/COMP/EXEC/BUG/SEC/PERF 七个维度并行评审，支持多轮增量迭代，每轮生成独立评审报告。
+按 UX/DATA/COMP/EXEC/BUG/SEC/PERF 等维度评审（优先并行 subagent，不支持时串行），支持多轮增量迭代，每轮生成独立评审报告。
 
 ### 5. 定稿导出
 
-写入 `2-用例定稿.md`，支持三种导出格式：
+写入 `2-用例定稿.md`（增量模式文首含变更摘要），支持三种导出格式：
 
 | 选项 | 格式 | 特点 |
 |------|------|------|
@@ -111,7 +132,16 @@ python3 check_project_copies.py --strict  # CI 检查，发现漂移返回失败
 | E | Excel (.xlsx) | 场景颜色、冻结表头、优先级着色、统计 Sheet |
 | X | XMind (.xmind) | 四级结构：检查点 → 场景类型 → 用例 → 步骤 |
 
-导出前自动运行内容质量检查，检查重复 ID、核心空值、非法枚举、步骤编号、模糊措辞、术语和引号；每次导出生成 `audit-summary.md`，汇总模块、场景、空值、异常字段及 Excel 公式错误。
+导出链路以 **Markdown 定稿为主输入**：
+
+```text
+2-用例定稿.md
+  → testcase_quality.py     → audit-summary.md
+  → md_to_json.py           → export_data.json  → Excel / XMind
+  → md_to_csv.py            → jira_export.csv
+```
+
+不要手写整份 `export_data.json`。质检覆盖重复 ID、核心空值、非法枚举、步骤编号、模糊措辞、术语和引号。
 
 ---
 
@@ -203,15 +233,21 @@ vim projects/<项目名>/checkpoints-index.md      # 添加检查点
 
 ```
 .testcase-assets/history/
-├── history-index.md                      # 自动追加索引
-├── 20260601_174203_碳盘查清单/           # 子目录：日期_时间_模块名
-│   ├── 0-用例准备.md
+├── history-index.md                      # 自动追加索引（增量含 mode / 基线）
+├── 20260601_174203_碳盘查清单/           # 全量：日期_时间_模块名
+│   ├── 0-用例准备.md                     # 需求/设计/检查点/复用映射
 │   ├── 1-评审记要.md
+│   ├── 1-评审报告-第N轮.md
 │   ├── 2-用例定稿.md
-│   ├── audit-summary.md                  # 内容质量与交付审计
-│   └── jira_export.csv
-└── 20260615_090000_用户中心/
-    └── ...
+│   ├── export_data.json                  # 由 md_to_json.py 生成
+│   ├── audit-summary.md
+│   └── jira_export.csv / testcases.xlsx / testcases.xmind
+├── 20260813_100000_组织树迭代/           # 增量示例
+│   ├── 0-变更分析.md
+│   ├── 1-变更集.md                       # 新增 / 修改 / 废弃
+│   ├── 1-评审记要.md                     # 合并后的完整有效表
+│   └── 2-用例定稿.md                     # 文首含变更摘要
+└── ...
 ```
 
 ---
@@ -229,16 +265,46 @@ vim projects/<项目名>/checkpoints-index.md      # 添加检查点
 
 ## 导出格式详情
 
+**主输入始终是 `2-用例定稿.md`。** 推荐命令顺序：
+
+```bash
+# 质检
+python3 .testcase-assets/scripts/testcase_quality.py \
+  <运行目录>/2-用例定稿.md --audit-output <运行目录>/audit-summary.md --strict
+
+# Jira CSV
+python3 .testcase-assets/scripts/md_to_csv.py \
+  <运行目录>/2-用例定稿.md <运行目录>/jira_export.csv
+
+# Excel / XMind（先 MD→JSON，勿手写 export_data.json）
+python3 .testcase-assets/scripts/md_to_json.py \
+  <运行目录>/2-用例定稿.md <运行目录>/export_data.json \
+  --project "<项目名>" --module "<模块名>"
+python3 .testcase-assets/scripts/export_excel.py \
+  <运行目录>/export_data.json <运行目录>/testcases.xlsx
+python3 .testcase-assets/scripts/export_xmind.py \
+  <运行目录>/export_data.json <运行目录>/testcases.xmind
+```
+
+| 脚本 | 作用 |
+|------|------|
+| `testcase_common.py` | 共用解析与优先级规则（被其它脚本引用） |
+| `testcase_quality.py` | 内容质量检查与 `audit-summary.md` |
+| `md_to_json.py` | 定稿 MD → `export_data.json` |
+| `md_to_csv.py` | 定稿 MD → Jira CSV |
+| `export_excel.py` / `export_xmind.py` | JSON → Excel / XMind |
+
 ### Jira CSV
 
 - 编码 UTF-8 with BOM，中文不乱码
 - 优先级映射：P0→High, P1→Medium, P2/P3→Low
+- 表格未写优先级时按场景推断：异常→High，正向/边界→Medium，**并发→Low（P2）**
 - 多步骤用例首行填基础信息，后续行填步骤详情
 
 ### Excel
 
-- 场景分组首行彩色粗边框（正向/异常/边界/并发各一色）
-- 优先级列 P0-P3 自动着色
+- 场景类型切换时用彩色粗上边框分隔（不插分组行，便于筛选）
+- 优先级列 P0-P3 自动着色；场景类型列徽章色
 - 列名行筛选器 + 前两行冻结 + 统计 Sheet（柱状图）
 
 ### XMind
@@ -269,4 +335,4 @@ vim projects/<项目名>/checkpoints-index.md      # 添加检查点
 
 ---
 
-*由 testcase-creator skill 维护 · 最后更新：2026-07-23*
+*由 testcase-creator skill 维护 · 最后更新：2026-08-13*

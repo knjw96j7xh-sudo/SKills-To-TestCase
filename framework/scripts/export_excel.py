@@ -30,55 +30,24 @@ JSON 格式（由 Claude Code 生成）：
 """
 
 import sys
-import re
 import json
-import subprocess
-from importlib.metadata import PackageNotFoundError, version
 from datetime import datetime
 from collections import defaultdict
+from pathlib import Path
 
+_SCRIPTS_DIR = Path(__file__).resolve().parent
+if str(_SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS_DIR))
 
-# --- 依赖自动安装（版本与仓库 requirements.lock 一致）---------------
+from testcase_common import (
+    TYPE_ORDER,
+    TYPE_PRIORITY,
+    case_sort_key,
+    ensure_package,
+    load_json_robust,
+)
 
-PINNED_DEPENDENCIES = {
-    "json-repair": "0.61.2",
-    "openpyxl": "3.1.5",
-}
-
-def _ensure(package: str, import_name: str = None):
-    """自动安装缺失的 Python 依赖。
-
-    Args:
-        package: pip 包名（如 "json-repair"）
-        import_name: import 名称（如 "json_repair"），默认用 package.replace("-", "_")
-    """
-    if import_name is None:
-        import_name = package.replace("-", "_")
-    expected = PINNED_DEPENDENCIES[package]
-    requirement = f"{package}=={expected}"
-    try:
-        if version(package) == expected:
-            __import__(import_name)
-            return
-    except (ImportError, PackageNotFoundError):
-        pass
-
-    try:
-        print(f"[INSTALL] 正在安装 {requirement} ...")
-        subprocess.check_call(
-            [sys.executable, "-m", "pip", "install", requirement, "-q"],
-            stdout=subprocess.DEVNULL,
-        )
-        print(f"[INSTALL] {requirement} 安装完成")
-    except subprocess.CalledProcessError as error:
-        raise RuntimeError(f"无法安装锁定依赖 {requirement}") from error
-
-
-# 自动安装依赖
-_ensure("json-repair")
-_ensure("openpyxl")
-
-from json_repair import repair_json
+ensure_package("openpyxl")
 from openpyxl import Workbook
 from openpyxl.styles import (
     Font, PatternFill, Alignment, Border, Side,
@@ -86,37 +55,6 @@ from openpyxl.styles import (
 from openpyxl.utils import get_column_letter
 from openpyxl.chart import BarChart, Reference
 from openpyxl.chart.label import DataLabelList
-
-
-# --- 容错 JSON 加载 ----------------------------------------------------
-
-def load_json_robust(filepath: str) -> dict:
-    """加载 JSON 文件，使用 json_repair 兼容 LLM 常见格式错误。
-
-    先尝试标准 json.load，失败后由 json_repair 自动修复：
-      单引号、尾逗号、None/True/False、BOM、注释、未转义引号、
-      未转义反斜杠、真实换行/Tab、数字前导零 等。
-    """
-    with open(filepath, "r", encoding="utf-8") as fh:
-        raw = fh.read()
-
-    if not raw.strip():
-        raise ValueError(f"文件为空: {filepath}")
-
-    # 快速路径：标准 JSON
-    try:
-        data = json.loads(raw)
-        if isinstance(data, (dict, list)):
-            return data if isinstance(data, dict) else {"testcases": data}
-    except json.JSONDecodeError:
-        pass
-
-    # 修复路径
-    repaired = repair_json(raw)
-    data = json.loads(repaired)
-    if isinstance(data, (dict, list)):
-        return data if isinstance(data, dict) else {"testcases": data}
-    raise ValueError(f"修复后的 JSON 格式异常: {type(data).__name__}")
 
 
 # ─── 颜色 & 样式常量 ───────────────────────────────────────────────────────────
@@ -159,15 +97,6 @@ C = {
     "border_group": "B0BEC5",
 }
 
-# 优先级默认映射（场景类型 → 默认优先级）
-TYPE_PRIORITY = {
-    "正向": "P1",
-    "异常": "P0",
-    "边界": "P1",
-    "并发": "P2",
-}
-
-TYPE_ORDER   = ["正向", "异常", "边界", "并发"]
 STATUS_OPTS  = ["未执行", "通过", "失败", "阻塞", "跳过"]
 
 # 列定义：(列头, 宽度, 列key或None)
@@ -535,14 +464,7 @@ def export_excel(input_json: str, output_xlsx: str):
         print("[WARN] testcases 为空，将生成仅含标题的 Excel 文件")
 
     # 按用例ID排序（TC-001 < TC-001a < TC-002）
-    def _sort_key(tc):
-        tid = tc.get("id", "")
-        match = re.match(r"TC-(\d+)([a-z]*)", tid, re.IGNORECASE)
-        if match:
-            return (int(match.group(1)), match.group(2).lower())
-        return (99999, tid)
-
-    testcases.sort(key=_sort_key)
+    testcases.sort(key=lambda tc: case_sort_key(tc.get("id", "")))
 
     wb = Workbook()
 
