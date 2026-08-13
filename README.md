@@ -79,9 +79,7 @@ python3 check_project_copies.py --strict  # CI 检查，发现漂移返回失败
 
 ## 运行模式与流程
 
-![用例生成 Skill 流程图](assets/testcase-skill-flow.png)
-
-> 上图仍以全量五阶段为主示意；**增量模式、检查点推荐、历史复用与 MD 导出链路以本文说明为准**（图可后续再换）。
+![用例生成 Skill 流程图](assets/testcase-skills-flow.png)
 
 触发 `/testcase-creator` 并通过初始化检查后，先选择运行模式：
 
