@@ -1,10 +1,22 @@
 #!/usr/bin/env python3
-"""Detect generated project copies that drift from repository sources."""
+"""Detect generated project copies that drift from repository sources.
+
+用法:
+    python3 check_project_copies.py
+    python3 check_project_copies.py --strict
+    python3 check_project_copies.py --fix          # 对齐 projects/* 的 Skill/脚本
+    python3 check_project_copies.py --fix --build  # 先 build 再 fix
+"""
+
+from __future__ import annotations
 
 import argparse
+import shutil
+import subprocess
+import sys
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
-
 
 IGNORED_NAMES = {".DS_Store", "__pycache__"}
 IGNORED_SUFFIXES = {".pyc", ".pyo"}
@@ -54,25 +66,26 @@ def _compare_tree(
     return drifts
 
 
-def scan_project_copies(repo_root: Path) -> list[Drift]:
+def installed_projects(repo_root: Path) -> list[Path]:
     projects_root = repo_root / "projects"
+    if not projects_root.is_dir():
+        return []
+    return sorted(
+        path
+        for path in projects_root.iterdir()
+        if path.is_dir() and path.name != "_template"
+    )
+
+
+def scan_project_copies(repo_root: Path) -> list[Drift]:
     agent_source = repo_root / "dist" / ".agents"
     script_source = repo_root / "framework" / "scripts"
     if not agent_source.is_dir():
         raise FileNotFoundError("dist/.agents 不存在，请先运行 ./build.sh")
 
     drifts: list[Drift] = []
-    if not projects_root.is_dir():
-        return drifts
-
-    for project in sorted(
-        path
-        for path in projects_root.iterdir()
-        if path.is_dir() and path.name != "_template"
-    ):
-        drifts.extend(
-            _compare_tree(project / ".agents", agent_source, "skills/")
-        )
+    for project in installed_projects(repo_root):
+        drifts.extend(_compare_tree(project / ".agents", agent_source, "skills/"))
         drifts.extend(
             _compare_tree(
                 project / ".testcase-assets" / "scripts",
@@ -81,6 +94,76 @@ def scan_project_copies(repo_root: Path) -> list[Drift]:
             )
         )
     return drifts
+
+
+def _copy_tree_files(source_root: Path, dest_root: Path) -> int:
+    """复制源树全部文件到目标，返回复制文件数。忽略缓存。"""
+    if not source_root.is_dir():
+        return 0
+    count = 0
+    for path in source_root.rglob("*"):
+        if not path.is_file():
+            continue
+        if any(part in IGNORED_NAMES for part in path.parts):
+            continue
+        if path.suffix in IGNORED_SUFFIXES:
+            continue
+        rel = path.relative_to(source_root)
+        dest = dest_root / rel
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(path, dest)
+        count += 1
+    return count
+
+
+def fix_project_copies(repo_root: Path) -> list[str]:
+    """将 projects/* 的 .agents 与 scripts 对齐统一源；写 FRAMEWORK_VERSION。"""
+    agent_source = repo_root / "dist" / ".agents"
+    cursor_source = repo_root / "dist" / ".cursor"
+    claude_source = repo_root / "dist" / ".claude"
+    script_source = repo_root / "framework" / "scripts"
+    template_source = repo_root / "framework" / "templates"
+    guide_source = repo_root / "TESTCASE_GUIDE.md"
+
+    if not agent_source.is_dir():
+        raise FileNotFoundError("dist/.agents 不存在，请先运行 ./build.sh")
+
+    # 延迟 import，避免循环
+    sys.path.insert(0, str(script_source))
+    from framework_versions import write_version_file  # type: ignore
+
+    messages: list[str] = []
+    stamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+    for project in installed_projects(repo_root):
+        n_agents = _copy_tree_files(agent_source, project / ".agents")
+        n_scripts = _copy_tree_files(
+            script_source, project / ".testcase-assets" / "scripts"
+        )
+        n_templates = _copy_tree_files(
+            template_source, project / ".testcase-assets" / "templates"
+        )
+        if cursor_source.is_dir():
+            _copy_tree_files(cursor_source, project / ".cursor")
+        if claude_source.is_dir():
+            # 不覆盖 settings.local.json
+            for path in claude_source.rglob("*"):
+                if not path.is_file():
+                    continue
+                if path.name == "settings.local.json":
+                    continue
+                rel = path.relative_to(claude_source)
+                dest = project / ".claude" / rel
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(path, dest)
+        if guide_source.is_file():
+            shutil.copy2(guide_source, project / "TESTCASE_GUIDE.md")
+        write_version_file(project / ".testcase-assets", synced_at=stamp)
+        messages.append(
+            f"[FIX] {project.name}: agents={n_agents} scripts={n_scripts} templates={n_templates}"
+        )
+    if not messages:
+        messages.append("[OK] 无 projects/* 已安装副本需要修复")
+    return messages
 
 
 def _relative(path: Path | None, repo_root: Path) -> str:
@@ -108,6 +191,8 @@ def print_report(drifts: list[Drift], repo_root: Path) -> None:
     print("[ACTION] 不要直接修改 projects/* 下的生成副本：")
     print("  - Skill 内容请修改 skills/*/prompt.md 或 meta.yaml，再运行 ./build.sh")
     print("  - 导出脚本请修改 framework/scripts/，再重新初始化目标项目")
+    print("  - 一键修复：python3 check_project_copies.py --fix")
+    print("  - 或：python3 check_project_copies.py --fix --build")
     print("  - CI 可运行 python3 check_project_copies.py --strict 阻断漂移")
 
 
@@ -124,8 +209,38 @@ def main() -> int:
         action="store_true",
         help="发现漂移时返回退出码 1，适用于 CI",
     )
+    parser.add_argument(
+        "--fix",
+        action="store_true",
+        help="将 projects/* 的 Skill/脚本对齐到 dist 与 framework/scripts",
+    )
+    parser.add_argument(
+        "--build",
+        action="store_true",
+        help="fix 前先执行 build.py --clean",
+    )
     args = parser.parse_args()
     repo_root = args.root.resolve()
+
+    if args.build:
+        build_py = repo_root / "build.py"
+        print("[BUILD] 正在构建 dist/ ...")
+        result = subprocess.run(
+            [sys.executable, str(build_py), "--clean"],
+            cwd=str(repo_root),
+            check=False,
+        )
+        if result.returncode != 0:
+            print("[ERROR] build 失败")
+            return result.returncode
+
+    if args.fix:
+        try:
+            for line in fix_project_copies(repo_root):
+                print(line)
+        except FileNotFoundError as error:
+            print(f"[ERROR] {error}")
+            return 2
 
     try:
         drifts = scan_project_copies(repo_root)
@@ -134,6 +249,8 @@ def main() -> int:
         return 2
 
     print_report(drifts, repo_root)
+    if args.fix and not drifts:
+        print("[OK] --fix 完成，副本已与统一源一致")
     return 1 if drifts and args.strict else 0
 
 

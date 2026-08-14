@@ -4,6 +4,71 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.10.0] - 2026-08-14
+
+### Added
+
+- **P0 版本体检与一键对齐**
+  - `framework/scripts/check_framework_version.py` + `framework_versions.py`：对照期望版本检查 `FRAMEWORK_VERSION`
+  - Skill 初始化强制版本体检，落后则提示 `--sync` / `--fix`，不继续生成
+  - `check_project_copies.py --fix`（可选 `--build`）：对齐 `projects/*` 的 Skill/脚本/模板
+  - `./sync-projects.sh`：本仓库一键 build+fix
+- **P1 一键导出与冒烟子集**
+  - `export_all.py`：质检 → JSON → J/E/X 编排
+  - 支持 `--priority` / `--module-filter` / `--ids` 过滤；子集产出 `*-smoke.*`
+- **P2 增量合并脚本**
+  - `merge_cases.py`：基线 + 变更集 → 有效全表，校验撞号/错号/废弃
+  - 增量工作流要求 **必须** 用脚本合并，禁止 Agent 手搓全表
+- **P3 周边增强**
+  - `suggest_assets_from_bugs.py`：缺陷列表 → 检查点/评审点候选（人确认后写入）
+  - `md_to_csv.py --tool jira|tapd|zentao` 多工具 CSV
+  - XMind：用例标题带优先级；新增「按模块」Sheet；统计含优先级/模块分布
+
+### Changed
+
+- testcase-creator **1.10.0**，testcase-export **1.8.0**
+- export-workflow / export Skill：推荐 `export_all`；CSV 多工具说明
+- init 权限列表补充新脚本
+
+### Docs
+
+- README / TESTCASE_GUIDE / CHANGELOG 同步 1.10 命令与能力
+
+### Tests
+
+- 覆盖版本检查、export_all 过滤、merge_cases、多工具 CSV、缺陷候选、--fix 契约
+
+## [1.9.1] - 2026-08-14
+
+### Added
+
+- **Excel 观感优化（export_excel）**
+  - 步骤/预期编号列表规范化（去空行、统一 `1.` 前缀，支持同行多编号拆分）
+  - 行高按步骤 + 预期 + 前置 + 测试点折行估算，并设最大行高上限
+  - 执行状态下拉：`未执行 / 通过 / 失败 / 阻塞 / 跳过`，默认「未执行」
+  - 失败/阻塞/通过/跳过状态列条件格式浅色提示
+  - 默认编写人：`meta.author` / `--author` / `project.config`「测试负责人」
+  - 摘要行标签化：`项目：` / `模块：` / `共 N 条` / `日期：`
+  - 统计 Sheet 增加优先级分布、所属模块分布（Top 12 + 其他）
+- **旧项目升级：`--sync` / `-Sync`**
+  - 升级 Skill、导出脚本、模板、TESTCASE_GUIDE、settings，**不覆盖** `project.config` / 检查点 / 评审点 / history
+  - 写入 `.testcase-assets/FRAMEWORK_VERSION` 版本戳
+  - Claude permissions 补充 `md_to_json.py`
+
+### Changed
+
+- testcase-creator **1.9.1**，testcase-export **1.7.0**
+- 列宽微调（步骤略加宽、ID/模块略收）
+
+### Docs
+
+- README：安装参数表补充 `--sync`；导出说明补充 Excel 执行列与统计维度
+- 初始化完成提示改为推荐 `--sync` 升级，而非一律 `--force`
+
+### Tests
+
+- 新增 Excel 规范化/下拉/统计断言，以及 init 脚本 `--sync` 契约检查
+
 ## [1.9.0] - 2026-08-13
 
 ### Added

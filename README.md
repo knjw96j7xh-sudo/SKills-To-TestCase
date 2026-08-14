@@ -45,8 +45,9 @@
 ├── dist/                          # 构建产物（自动生成，gitignore）
 ├── build.sh / build.py            # 构建脚本
 ├── requirements.lock              # 锁定 Python 依赖版本
-├── check_project_copies.py        # 检查项目副本是否偏离 skills/framework
-├── init-testcase.sh / .ps1        # 一键初始化脚本
+├── check_project_copies.py        # 检查/修复 projects/* 副本漂移（--fix）
+├── sync-projects.sh               # 本仓库 projects/* 一键 build+对齐
+├── init-testcase.sh / .ps1        # 一键初始化 / --sync 升级
 ├── TESTCASE_GUIDE.md              # 纯对话工具（ChatGPT 等）使用指南
 └── CHANGELOG.md
 ```
@@ -58,7 +59,9 @@
 
 ```bash
 python3 check_project_copies.py           # 本地检查，仅警告
-python3 check_project_copies.py --strict  # CI 检查，发现漂移返回失败
+python3 check_project_copies.py --strict       # CI：漂移则失败
+python3 check_project_copies.py --fix --build # 本仓库 projects/* 一键对齐
+./sync-projects.sh                             # 同上
 ```
 
 发现漂移时，请修改 `skills/*/prompt.md`、`skills/*/meta.yaml` 或 `framework/scripts/`，
@@ -157,7 +160,10 @@ python3 check_project_copies.py --strict  # CI 检查，发现漂移返回失败
 # 也可以直接传入项目资产目录
 ./init-testcase.sh ./projects/_template /path/to/your-project
 
-# 强制覆盖已有文件
+# 旧项目升级到最新 Skill / 脚本（推荐；不覆盖项目资产）
+./init-testcase.sh _template /path/to/your-project --sync
+
+# 强制覆盖全部文件（含 project.config / 检查点，慎用）
 ./init-testcase.sh _template /path/to/your-project --force
 ```
 
@@ -165,8 +171,12 @@ python3 check_project_copies.py --strict  # CI 检查，发现漂移返回失败
 |------|------|
 | `<项目名称或目录>` | `projects/` 下的子目录名（如 `_template`），或项目资产目录路径 |
 | `<目标路径>` | 你要安装到的实际项目目录（绝对路径） |
+| `--sync` | **升级模式**：覆盖 Skill、导出脚本、模板、指南与权限配置；**保护** `project.config` / 检查点 / 评审点 / history |
+| `--force` | 覆盖全部目标文件（含项目资产） |
 
-脚本会自动完成：复制 skill 文件、框架模板、导出脚本、项目资产，生成 `.claude/settings.local.json`，初始化 history 目录，追加 `.gitignore` 规则。
+脚本会自动完成：复制 skill 文件、框架模板、导出脚本、项目资产，生成 `.claude/settings.local.json`，写入 `.testcase-assets/FRAMEWORK_VERSION`，初始化 history 目录，追加 `.gitignore` 规则。
+
+> 从 1.8 升到 1.9+ 时，请用 **`--sync`**，不必 `--force`。只有需要重置模板项目资产时才用 `--force`。
 
 ### 安装到当前目录（在本仓库内使用）
 
@@ -213,7 +223,7 @@ vim projects/my-project/checkpoints-index.md     # 补充检查点
 vim skills/testcase-creator/prompt.md     # 编辑流程入口和强制约束
 vim skills/testcase-creator/references/*.md  # 编辑阶段细节
 ./build.sh                                # 重新构建
-./init-testcase.sh <项目名> <目标路径> --force  # 覆盖安装
+./init-testcase.sh <项目名> <目标路径> --sync  # 升级 Skill/脚本（保护项目资产）
 ```
 
 ### 更新项目资产
@@ -263,51 +273,54 @@ vim projects/<项目名>/checkpoints-index.md      # 添加检查点
 
 ## 导出格式详情
 
-**主输入始终是 `2-用例定稿.md`。** 推荐命令顺序：
+**主输入始终是 `2-用例定稿.md`。** 推荐一键导出：
 
 ```bash
-# 质检
-python3 .testcase-assets/scripts/testcase_quality.py \
-  <运行目录>/2-用例定稿.md --audit-output <运行目录>/audit-summary.md --strict
+# 版本体检（Skill 启动也会跑）
+python3 .testcase-assets/scripts/check_framework_version.py
 
-# Jira CSV
-python3 .testcase-assets/scripts/md_to_csv.py \
-  <运行目录>/2-用例定稿.md <运行目录>/jira_export.csv
+# 一键：质检 → JSON → CSV + Excel + XMind
+python3 .testcase-assets/scripts/export_all.py \
+  <运行目录>/2-用例定稿.md --out-dir <运行目录> \
+  --formats j,e,x --project "<项目名>" --module "<模块名>"
 
-# Excel / XMind（先 MD→JSON，勿手写 export_data.json）
-python3 .testcase-assets/scripts/md_to_json.py \
-  <运行目录>/2-用例定稿.md <运行目录>/export_data.json \
-  --project "<项目名>" --module "<模块名>"
-python3 .testcase-assets/scripts/export_excel.py \
-  <运行目录>/export_data.json <运行目录>/testcases.xlsx
-python3 .testcase-assets/scripts/export_xmind.py \
-  <运行目录>/export_data.json <运行目录>/testcases.xmind
+# 冒烟子集（仅 P0+P1）
+python3 .testcase-assets/scripts/export_all.py \
+  <运行目录>/2-用例定稿.md --out-dir <运行目录> \
+  --formats e --priority P0,P1 --project "<项目名>" --module "<模块名>"
+
+# 分步仍可用：质检 / md_to_csv / md_to_json / export_excel / export_xmind
+# CSV 多工具：md_to_csv.py ... --tool jira|tapd|zentao
+# 增量合并：merge_cases.py --baseline 旧定稿.md --changeset 1-变更集.md --output 1-评审记要.md
 ```
 
 | 脚本 | 作用 |
 |------|------|
-| `testcase_common.py` | 共用解析与优先级规则（被其它脚本引用） |
+| `check_framework_version.py` | 检查 FRAMEWORK_VERSION 是否落后 |
+| `export_all.py` | 一键质检+导出；支持冒烟子集 |
+| `merge_cases.py` | 增量变更集合并与校验 |
+| `suggest_assets_from_bugs.py` | 缺陷 → 检查点/评审点候选 |
+| `testcase_common.py` | 共用解析与优先级规则 |
 | `testcase_quality.py` | 内容质量检查与 `audit-summary.md` |
 | `md_to_json.py` | 定稿 MD → `export_data.json` |
-| `md_to_csv.py` | 定稿 MD → Jira CSV |
+| `md_to_csv.py` | 定稿 MD → Jira / Tapd / 禅道 CSV |
 | `export_excel.py` / `export_xmind.py` | JSON → Excel / XMind |
 
-### Jira CSV
+### CSV（Jira / Tapd / 禅道）
 
-- 编码 UTF-8 with BOM，中文不乱码
-- 优先级映射：P0→High, P1→Medium, P2/P3→Low
-- 表格未写优先级时按场景推断：异常→High，正向/边界→Medium，**并发→Low（P2）**
-- 多步骤用例首行填基础信息，后续行填步骤详情
+- 编码 UTF-8 with BOM；默认 Jira 列，可用 `--tool tapd|zentao`
+- Jira 优先级：P0→High, P1→Medium, P2/P3→Low；缺省并发→Low（P2）
 
 ### Excel
 
-- 场景类型切换时用彩色粗上边框分隔（不插分组行，便于筛选）
-- 优先级列 P0-P3 自动着色；场景类型列徽章色
-- 列名行筛选器 + 前两行冻结 + 统计 Sheet（柱状图）
+- 步骤/预期规范化与自适应行高、执行状态下拉、编写人默认
+- 场景类型切换彩色上边框分隔；优先级着色；统计 Sheet（场景/优先级/模块）
 
 ### XMind
 
-- 四级结构：根节点 → 检查点 → 场景类型 → 用例 → 步骤
+- Sheet1：检查点 → 场景类型 → 用例（标题含优先级）→ 步骤
+- Sheet2：按模块 → 优先级 → 用例
+- Sheet3：统计总览（场景 / 优先级 / 模块）
 - 优先级显示为用例节点标签，Sheet 2 为统计总览
 
 ---

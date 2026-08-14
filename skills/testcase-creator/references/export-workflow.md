@@ -6,9 +6,11 @@
 
 ```text
 【阶段 5 — 定稿导出】
-J. Jira CSV
+J. Jira / Tapd / 禅道 CSV（默认 Jira；可指定工具）
 E. Excel
 X. XMind
+A. 一键全导出（质检+JSON+所选格式）
+S. 冒烟子集导出（如仅 P0+P1）
 N. 不导出
 ```
 
@@ -17,30 +19,50 @@ N. 不导出
 ## 2. 统一导出原则
 
 - **主输入是 Markdown 定稿**，不要由 Agent 手写整份 `export_data.json`。
-- Excel / XMind 中间 JSON 必须由 `md_to_json.py` 从定稿生成。
+- Excel / XMind 中间 JSON 必须由 `md_to_json.py` 或 `export_all.py` 从定稿生成。
 - 导出前必须跑内容质量检查；ERROR 阻断，WARN 写入审计摘要但不阻断。
 - 生成流程（含全量与增量）中所有用例的 `remark` 必须为空；独立 `/testcase-export` 可保留已有备注。
+- 优先推荐 **`export_all.py`**，减少漏步骤。
 
-## 3. Jira CSV
+## 3. 一键导出（推荐）
 
-```bash
-python3 .testcase-assets/scripts/testcase_quality.py \
-  <运行目录>/2-用例定稿.md \
-  --audit-output <运行目录>/audit-summary.md \
-  --strict
-```
-
-修复阻断项后：
+从 `project.config.md` 读取项目名称，测试对象使用本次模块名：
 
 ```bash
-python3 .testcase-assets/scripts/md_to_csv.py \
+# 全量：质检 → JSON → Jira CSV + Excel + XMind
+python3 .testcase-assets/scripts/export_all.py \
   <运行目录>/2-用例定稿.md \
-  <运行目录>/jira_export.csv
+  --out-dir <运行目录> \
+  --formats j,e,x \
+  --project "<项目名称>" \
+  --module "<测试对象>"
+
+# 仅 Excel + XMind
+python3 .testcase-assets/scripts/export_all.py \
+  <运行目录>/2-用例定稿.md \
+  --out-dir <运行目录> \
+  --formats e,x \
+  --project "<项目名称>" --module "<测试对象>"
+
+# 冒烟子集：仅 P0+P1
+python3 .testcase-assets/scripts/export_all.py \
+  <运行目录>/2-用例定稿.md \
+  --out-dir <运行目录> \
+  --formats e \
+  --priority P0,P1 \
+  --project "<项目名称>" --module "<测试对象>"
+
+# 按模块 / ID 过滤
+python3 .testcase-assets/scripts/export_all.py ... --module-filter 组织树
+python3 .testcase-assets/scripts/export_all.py ... --ids TC-001,TC-005
+
+# CSV 工具模板：jira（默认）/ tapd / zentao
+python3 .testcase-assets/scripts/export_all.py ... --formats j --csv-tool tapd
 ```
 
-CSV 使用 UTF-8 BOM。优先级映射：P0→High、P1→Medium、P2/P3→Low；缺省优先级按场景类型推断（异常=P0/High，正向/边界=P1/Medium，**并发=P2/Low**）。多步骤首行填基础信息，后续行填步骤。
+子集导出时会额外生成 `2-用例定稿-子集.md` 与 `*-smoke.*` 文件名。
 
-## 4. Excel 与 XMind
+## 4. 分步导出（兼容）
 
 ### 4.1 质检
 
@@ -51,9 +73,21 @@ python3 .testcase-assets/scripts/testcase_quality.py \
   --strict
 ```
 
-### 4.2 MD → JSON（必须用脚本）
+### 4.2 CSV
 
-从 `project.config.md` 读取项目名称，测试对象使用本次模块名：
+```bash
+python3 .testcase-assets/scripts/md_to_csv.py \
+  <运行目录>/2-用例定稿.md \
+  <运行目录>/jira_export.csv
+
+# 或
+python3 .testcase-assets/scripts/md_to_csv.py ... --tool tapd
+python3 .testcase-assets/scripts/md_to_csv.py ... --tool zentao
+```
+
+CSV 使用 UTF-8 BOM。Jira 优先级映射：P0→High、P1→Medium、P2/P3→Low；缺省优先级按场景类型推断（异常=P0/High，正向/边界=P1/Medium，**并发=P2/Low**）。
+
+### 4.3 MD → JSON（必须用脚本）
 
 ```bash
 python3 .testcase-assets/scripts/md_to_json.py \
@@ -69,9 +103,9 @@ python3 .testcase-assets/scripts/md_to_json.py \
 python3 -c "import json; d=json.load(open('<运行目录>/export_data.json')); assert all(tc.get('remark', '') == '' for tc in d['testcases'])"
 ```
 
-禁止跳过 `md_to_json.py` 手写 JSON。仅当脚本失败且无法修复定稿表时，才允许手工修正 **MD 表** 后重跑脚本，不得直接编造 JSON 字段。
+禁止跳过 `md_to_json.py` / `export_all.py` 手写 JSON。仅当脚本失败且无法修复定稿表时，才允许手工修正 **MD 表** 后重跑脚本，不得直接编造 JSON 字段。
 
-### 4.3 导出
+### 4.4 Excel 与 XMind
 
 ```bash
 python3 .testcase-assets/scripts/export_excel.py \

@@ -65,6 +65,16 @@ TYPE_BG = {
     "并发": "#1565C0",
 }
 
+# 优先级色（用例标签与统计）
+PRIORITY_BG = {
+    "P0": "#C62828",
+    "P1": "#EF6C00",
+    "P2": "#F9A825",
+    "P3": "#2E7D32",
+}
+
+PRIORITY_ORDER = ["P0", "P1", "P2", "P3"]
+
 # 前置条件/步骤/预期：柔和色
 DETAIL_COLOR = {
     "precondition": "#37474F",  # 深灰蓝
@@ -200,11 +210,15 @@ def build_testcase_sheet(data: dict) -> dict:
                              bg=DETAIL_COLOR["expected"], fg="#FFFFFF")
                     )
 
-                case_title = f"{tc_id}  {tc_point}"
+                case_title = f"[{priority}] {tc_id}  {tc_point}"
+                module_name = (tc.get("module") or "").strip()
+                labels = [priority]
+                if module_name:
+                    labels.append(module_name)
                 case_node  = node(
                     title    = case_title,
                     children = detail_children if detail_children else None,
-                    labels   = [priority],
+                    labels   = labels,
                     bg       = type_bg,
                     fg       = "#FFFFFF",
                 )
@@ -265,12 +279,10 @@ def build_testcase_sheet(data: dict) -> dict:
 
 def build_stat_sheet(data: dict) -> dict:
     """
-    按场景类型汇总各检查点覆盖情况：
-    [统计总览]
-    ├── 正向场景 (N条)
-    │   ├── XX-01 (N条)
-    │   └── ...
-    └── 异常场景 ...
+    统计总览：
+    - 场景类型 → 检查点
+    - 优先级分布
+    - 所属模块分布
     """
     meta      = data.get("meta", {})
     project   = meta.get("project", "测试用例")
@@ -278,10 +290,15 @@ def build_stat_sheet(data: dict) -> dict:
 
     # type → checkpoint → count
     stat: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+    priority_counts: dict[str, int] = defaultdict(int)
+    module_counts: dict[str, int] = defaultdict(int)
     for tc in testcases:
         t  = tc.get("type", "正向")
         cp = tc.get("checkpoint", "").strip() or "未关联检查点"
         stat[t][cp] += 1
+        p = tc.get("priority") or TYPE_PRIORITY.get(t, "P2")
+        priority_counts[p] += 1
+        module_counts[(tc.get("module") or "").strip() or "(未填模块)"] += 1
 
     type_nodes = []
     for tc_type in TYPE_ORDER:
@@ -310,6 +327,48 @@ def build_stat_sheet(data: dict) -> dict:
         )
         type_nodes.append(type_node)
 
+    # 优先级分支
+    p_nodes = []
+    for p in PRIORITY_ORDER:
+        cnt = priority_counts.get(p, 0)
+        if cnt <= 0:
+            continue
+        p_nodes.append(
+            node(
+                f"{p}  ({cnt} 条)",
+                bg=PRIORITY_BG.get(p, "#607D8B"),
+                fg="#FFFFFF",
+                bold=True,
+            )
+        )
+    if p_nodes:
+        type_nodes.append(
+            node(
+                title=f"优先级分布  共 {len(testcases)} 条",
+                children=p_nodes,
+                bg="#455A64",
+                fg="#FFFFFF",
+                bold=True,
+            )
+        )
+
+    # 模块分支（Top 12）
+    mod_nodes = []
+    for name, cnt in sorted(module_counts.items(), key=lambda x: (-x[1], x[0]))[:12]:
+        mod_nodes.append(
+            node(f"{name}  ({cnt} 条)", bg="#546E7A", fg="#FFFFFF")
+        )
+    if mod_nodes:
+        type_nodes.append(
+            node(
+                title="所属模块分布",
+                children=mod_nodes,
+                bg="#37474F",
+                fg="#FFFFFF",
+                bold=True,
+            )
+        )
+
     stat_root = node(
         title    = f"统计总览  —  {project}",
         children = type_nodes,
@@ -324,6 +383,76 @@ def build_stat_sheet(data: dict) -> dict:
         "title":     "统计总览",
         "timestamp": make_ts(),
         "rootTopic": stat_root,
+    }
+
+
+def build_module_sheet(data: dict) -> dict:
+    """按所属模块 → 优先级 → 用例 组织，便于模块评审。"""
+    meta = data.get("meta", {})
+    project = meta.get("project", "测试用例")
+    testcases = list(data.get("testcases", []))
+    testcases.sort(key=lambda tc: case_sort_key(tc.get("id", "")))
+
+    module_groups: dict[str, list] = defaultdict(list)
+    for tc in testcases:
+        module_groups[(tc.get("module") or "").strip() or "(未填模块)"].append(tc)
+
+    module_nodes = []
+    for mod_i, module_name in enumerate(sorted(module_groups.keys())):
+        cases = module_groups[module_name]
+        mod_color = CHECKPOINT_COLORS[mod_i % len(CHECKPOINT_COLORS)]
+        p_groups: dict[str, list] = defaultdict(list)
+        for tc in cases:
+            p = tc.get("priority") or TYPE_PRIORITY.get(tc.get("type", "正向"), "P2")
+            p_groups[p].append(tc)
+        p_nodes = []
+        for p in PRIORITY_ORDER:
+            tc_list = p_groups.get(p, [])
+            if not tc_list:
+                continue
+            case_nodes = []
+            for tc in tc_list:
+                tc_type = tc.get("type", "正向")
+                case_nodes.append(
+                    node(
+                        title=f"{tc.get('id', '')}  {tc.get('test_point', '')}",
+                        labels=[tc_type, p],
+                        bg=TYPE_BG.get(tc_type, "#607D8B"),
+                        fg="#FFFFFF",
+                    )
+                )
+            p_nodes.append(
+                node(
+                    title=f"{p}  ({len(tc_list)} 条)",
+                    children=case_nodes,
+                    bg=PRIORITY_BG.get(p, "#607D8B"),
+                    fg="#FFFFFF",
+                    bold=True,
+                )
+            )
+        module_nodes.append(
+            node(
+                title=f"{module_name}  ({len(cases)} 条)",
+                children=p_nodes,
+                bg=mod_color,
+                fg="#FFFFFF",
+                bold=True,
+            )
+        )
+
+    root = node(
+        title=f"{project}  —  按模块",
+        children=module_nodes,
+        bg=ROOT_COLOR,
+        fg="#FFFFFF",
+        bold=True,
+    )
+    return {
+        "id": make_id(),
+        "class": "sheet",
+        "title": "按模块",
+        "timestamp": make_ts(),
+        "rootTopic": root,
     }
 
 
@@ -375,6 +504,7 @@ def export_xmind(input_json: str, output_xmind: str):
 
     content = [
         build_testcase_sheet(data),
+        build_module_sheet(data),
         build_stat_sheet(data),
     ]
 
@@ -406,9 +536,10 @@ def export_xmind(input_json: str, output_xmind: str):
         print(f"[FAIL] 写入 XMind 失败: {e}")
         sys.exit(1)
 
-    print(f"[OK] XMind 已生成：{output_xmind}（共 {len(testcases)} 条用例，2 个 Sheet）")
+    print(f"[OK] XMind 已生成：{output_xmind}（共 {len(testcases)} 条用例，3 个 Sheet）")
     print(f"     Sheet 1：测试用例（检查点 → 场景类型 → 用例 → 步骤）")
-    print(f"     Sheet 2：统计总览（场景类型 → 检查点覆盖情况）")
+    print(f"     Sheet 2：按模块（模块 → 优先级 → 用例）")
+    print(f"     Sheet 3：统计总览（场景 / 优先级 / 模块）")
     print(f"     提示：用 XMind 8 或更高版本打开")
 
 

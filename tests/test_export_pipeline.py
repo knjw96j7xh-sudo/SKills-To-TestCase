@@ -118,8 +118,287 @@ class SkillContractTest(unittest.TestCase):
     def test_versions(self):
         creator = (ROOT / "skills/testcase-creator/meta.yaml").read_text(encoding="utf-8")
         export = (ROOT / "skills/testcase-export/meta.yaml").read_text(encoding="utf-8")
-        self.assertIn('version: "1.9.0"', creator)
-        self.assertIn('version: "1.6.0"', export)
+        self.assertIn('version: "1.10.0"', creator)
+        self.assertIn('version: "1.8.0"', export)
+        versions = load_module("framework_versions", SCRIPTS / "framework_versions.py")
+        self.assertEqual("1.10.0", versions.EXPECTED["testcase-creator"])
+        self.assertEqual("1.8.0", versions.EXPECTED["testcase-export"])
+
+    def test_prompt_requires_version_check_and_merge_script(self):
+        prompt = (ROOT / "skills/testcase-creator/prompt.md").read_text(encoding="utf-8")
+        change = (
+            ROOT / "skills/testcase-creator/references/change-workflow.md"
+        ).read_text(encoding="utf-8")
+        export_ref = (
+            ROOT / "skills/testcase-creator/references/export-workflow.md"
+        ).read_text(encoding="utf-8")
+        self.assertIn("check_framework_version.py", prompt)
+        self.assertIn("export_all.py", export_ref)
+        self.assertIn("merge_cases.py", change)
+        self.assertIn("suggest_assets_from_bugs.py", prompt)
+
+
+class ExcelPresentationTest(unittest.TestCase):
+    def test_normalize_and_export_status_dropdown(self):
+        excel = load_module("export_excel", SCRIPTS / "export_excel.py")
+        self.assertEqual(
+            "1. 打开页面\n2. 单击保存",
+            excel.normalize_multiline("1、打开页面\n\n2.单击保存\n"),
+        )
+        self.assertEqual(
+            "1. a\n2. b",
+            excel.normalize_multiline("1. a 2. b"),
+        )
+        height = excel.estimate_row_height(
+            "1. " + ("步骤文字" * 20),
+            "1. 预期",
+            "前置",
+            "测试点",
+        )
+        self.assertGreaterEqual(height, excel.MIN_ROW_HEIGHT)
+        self.assertLessEqual(height, excel.MAX_ROW_HEIGHT)
+
+        payload = {
+            "meta": {
+                "project": "演示",
+                "module": "模块A",
+                "generated_at": "2026-08-14",
+                "author": "测试同学",
+            },
+            "testcases": [
+                {
+                    "id": "TC-001",
+                    "module": "模块A",
+                    "test_point": "保存",
+                    "precondition": "已登录",
+                    "steps": "1. 输入 2. 保存",
+                    "expected": "1. 成功",
+                    "checkpoint": "UC-01",
+                    "type": "正向",
+                    "priority": "P1",
+                    "remark": "",
+                },
+                {
+                    "id": "TC-002",
+                    "module": "模块B",
+                    "test_point": "异常",
+                    "precondition": "",
+                    "steps": "1. 提交",
+                    "expected": "1. 提示错误",
+                    "checkpoint": "",
+                    "type": "异常",
+                    "priority": "P0",
+                    "remark": "保留备注",
+                },
+            ],
+        }
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            assets = temp_path / ".testcase-assets"
+            assets.mkdir()
+            (assets / "project.config.md").write_text(
+                "| 测试负责人 | 配置负责人 |\n", encoding="utf-8"
+            )
+            history = assets / "history" / "run1"
+            history.mkdir(parents=True)
+            input_path = history / "export_data.json"
+            output_path = history / "testcases.xlsx"
+            input_path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPTS / "export_excel.py"),
+                    str(input_path),
+                    str(output_path),
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(0, result.returncode, result.stderr + result.stdout)
+            self.assertTrue(output_path.is_file())
+
+            from openpyxl import load_workbook
+
+            wb = load_workbook(output_path)
+            ws = wb["测试用例"]
+            self.assertIn("项目：演示", ws["A1"].value)
+            self.assertEqual("未执行", ws.cell(row=3, column=10).value)
+            self.assertEqual("测试同学", ws.cell(row=3, column=11).value)
+            self.assertEqual("1. 输入\n2. 保存", ws.cell(row=3, column=5).value)
+            self.assertTrue(ws.data_validations.dataValidation)
+            self.assertIn("统计", wb.sheetnames)
+            stat = wb["统计"]
+            titles = [stat.cell(row=r, column=1).value for r in range(1, 40)]
+            self.assertTrue(any(t and "优先级" in str(t) for t in titles))
+            self.assertTrue(any(t and "所属模块" in str(t) for t in titles))
+
+
+class InitSyncTest(unittest.TestCase):
+    def test_init_script_documents_sync_mode(self):
+        sh = (ROOT / "init-testcase.sh").read_text(encoding="utf-8")
+        ps1 = (ROOT / "init-testcase.ps1").read_text(encoding="utf-8")
+        self.assertIn("--sync", sh)
+        self.assertIn("项目资产已保护", sh)
+        self.assertIn("FRAMEWORK_VERSION", sh)
+        self.assertIn("md_to_json.py", sh)
+        self.assertIn("export_all.py", sh)
+        self.assertIn("-Sync", ps1)
+        self.assertIn("FRAMEWORK_VERSION", ps1)
+        self.assertTrue((ROOT / "sync-projects.sh").is_file())
+
+
+class VersionAndMergeTest(unittest.TestCase):
+    def test_framework_version_check(self):
+        versions = load_module("framework_versions", SCRIPTS / "framework_versions.py")
+        with tempfile.TemporaryDirectory() as temp_dir:
+            assets = Path(temp_dir) / ".testcase-assets"
+            assets.mkdir()
+            ok, messages = versions.check_versions(None)
+            self.assertFalse(ok)
+
+            path = versions.write_version_file(assets)
+            ok, messages = versions.check_versions(path)
+            self.assertTrue(ok, messages)
+
+            path.write_text("testcase-creator=0.0.1\ntestcase-export=0.0.1\n", encoding="utf-8")
+            ok, messages = versions.check_versions(path)
+            self.assertFalse(ok)
+
+    def test_merge_cases_script(self):
+        baseline = """## 模块
+| 用例ID | 所属模块 | 测试点 | 前置条件 | 操作步骤 | 预期结果 | 关联检查点 | 场景类型 | 优先级 | 备注 |
+|--------|----------|--------|----------|----------|----------|------------|----------|--------|------|
+| TC-001 | 模块 | 旧点 | 无 | 1. a | 1. ok | UC-01 | 正向 | P1 | |
+| TC-002 | 模块 | 待废 | 无 | 1. b | 1. ok | | 异常 | P0 | |
+"""
+        changeset = """## 变更集
+### 新增
+| 用例ID | 所属模块 | 测试点 | 前置条件 | 操作步骤 | 预期结果 | 关联检查点 | 场景类型 | 优先级 | 备注 |
+|--------|----------|--------|----------|----------|----------|------------|----------|--------|------|
+| TC-003 | 模块 | 新点 | 无 | 1. c | 1. ok | | 边界 | P1 | |
+
+### 修改
+| 用例ID | 所属模块 | 测试点 | 前置条件 | 操作步骤 | 预期结果 | 关联检查点 | 场景类型 | 优先级 | 备注 |
+|--------|----------|--------|----------|----------|----------|------------|----------|--------|------|
+| TC-001 | 模块 | 新描述 | 无 | 1. a2 | 1. ok2 | UC-01 | 正向 | P1 | |
+
+### 废弃
+| 用例ID | 测试点 | 废弃原因 |
+|--------|--------|----------|
+| TC-002 | 待废 | 需求删除 |
+"""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            base = temp_path / "base.md"
+            change = temp_path / "change.md"
+            out = temp_path / "merged.md"
+            base.write_text(baseline, encoding="utf-8")
+            change.write_text(changeset, encoding="utf-8")
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPTS / "merge_cases.py"),
+                    "--baseline",
+                    str(base),
+                    "--changeset",
+                    str(change),
+                    "--output",
+                    str(out),
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(0, result.returncode, result.stderr + result.stdout)
+            text = out.read_text(encoding="utf-8")
+            self.assertIn("TC-001", text)
+            self.assertIn("新描述", text)
+            self.assertIn("TC-003", text)
+            self.assertNotIn("TC-002", text.split("## 模块")[-1] if "## 模块" in text else text)
+
+    def test_export_all_priority_filter_and_csv_tools(self):
+        md = """## 用户中心
+| 用例ID | 所属模块 | 测试点 | 前置条件 | 操作步骤 | 预期结果 | 关联检查点 | 场景类型 | 优先级 | 备注 |
+|--------|----------|--------|----------|----------|----------|------------|----------|--------|------|
+| TC-001 | 用户中心 | 保存 | 已登录 | 1. 保存 | 1. 成功 | UC-01 | 正向 | P1 | |
+| TC-002 | 用户中心 | 崩溃 | 无 | 1. 提交 | 1. 提示 | | 异常 | P0 | |
+| TC-003 | 用户中心 | 并发 | 无 | 1. 双击 | 1. 一次 | | 并发 | P2 | |
+"""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            md_path = temp_path / "2-用例定稿.md"
+            md_path.write_text(md, encoding="utf-8")
+            out_dir = temp_path / "out"
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPTS / "export_all.py"),
+                    str(md_path),
+                    "--out-dir",
+                    str(out_dir),
+                    "--formats",
+                    "j,e",
+                    "--priority",
+                    "P0,P1",
+                    "--project",
+                    "演示",
+                    "--module",
+                    "用户中心",
+                    "--skip-quality",
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(0, result.returncode, result.stderr + result.stdout)
+            payload = json.loads((out_dir / "export_data.json").read_text(encoding="utf-8"))
+            self.assertEqual(2, len(payload["testcases"]))
+            self.assertTrue((out_dir / "testcases-smoke.xlsx").is_file())
+            self.assertTrue((out_dir / "jira_export-smoke.csv").is_file())
+
+            tapd = temp_path / "tapd.csv"
+            csv_result = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPTS / "md_to_csv.py"),
+                    str(md_path),
+                    str(tapd),
+                    "--tool",
+                    "tapd",
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(0, csv_result.returncode, csv_result.stderr)
+            self.assertIn("用例名称", tapd.read_text(encoding="utf-8-sig"))
+
+    def test_suggest_assets_from_bugs(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            bugs = temp_path / "bugs.txt"
+            bugs.write_text("BUG-100\t提交重复数据\n空指针崩溃\n", encoding="utf-8")
+            out = temp_path / "cand.md"
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPTS / "suggest_assets_from_bugs.py"),
+                    str(bugs),
+                    "--kind",
+                    "both",
+                    "--output",
+                    str(out),
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(0, result.returncode, result.stderr + result.stdout)
+            text = out.read_text(encoding="utf-8")
+            self.assertIn("BUG-01", text)
+            self.assertIn("提交重复数据", text)
 
 
 if __name__ == "__main__":

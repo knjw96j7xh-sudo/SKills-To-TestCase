@@ -120,6 +120,38 @@ class ProjectCopyCheckTest(unittest.TestCase):
         self.assertEqual(0, result.returncode)
         self.assertIn("[WARN]", result.stdout)
 
+    def test_fix_aligns_scripts_and_agents(self):
+        # 源有新内容，项目副本旧/缺失
+        self.agent_source.write_text("new-agent\n", encoding="utf-8")
+        self.script_source.write_text("new-script\n", encoding="utf-8")
+        extra_script = self.repo / "framework/scripts/framework_versions.py"
+        extra_script.write_text(
+            'EXPECTED = {"testcase-creator": "1.10.0", "testcase-export": "1.8.0"}\n'
+            "from pathlib import Path\n"
+            "from datetime import datetime\n"
+            "def write_version_file(target_assets, *, synced_at=None):\n"
+            "    target_assets.mkdir(parents=True, exist_ok=True)\n"
+            "    path = target_assets / 'FRAMEWORK_VERSION'\n"
+            "    path.write_text('testcase-creator=1.10.0\\ntestcase-export=1.8.0\\n', encoding='utf-8')\n"
+            "    return path\n",
+            encoding="utf-8",
+        )
+        self.project_agent.write_text("old-agent\n", encoding="utf-8")
+        self.project_script.write_text("old-script\n", encoding="utf-8")
+
+        messages = CHECKER.fix_project_copies(self.repo)
+        self.assertTrue(any("[FIX]" in m for m in messages))
+        self.assertEqual("new-agent\n", self.project_agent.read_text(encoding="utf-8"))
+        self.assertEqual("new-script\n", self.project_script.read_text(encoding="utf-8"))
+        version_file = (
+            self.repo / "projects/demo/.testcase-assets/FRAMEWORK_VERSION"
+        )
+        self.assertTrue(version_file.is_file())
+        drifts = CHECKER.scan_project_copies(self.repo)
+        # framework_versions 会同步到项目 scripts，源侧也有 → 应无 modified/missing
+        remaining = [d for d in drifts if d.kind in ("modified", "missing")]
+        self.assertEqual([], remaining)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
-"""
-将用例定稿 MD 文件转换为 Jira CSV 格式。
-用法: python3 md_to_csv.py <input_md> <output_csv>
+"""将用例定稿 MD 转换为测试管理工具 CSV。
+
+用法:
+    python3 md_to_csv.py <input_md> <output_csv>
+    python3 md_to_csv.py <input_md> <output_csv> --tool jira|tapd|zentao
 """
 
 from __future__ import annotations
 
+import argparse
 import csv
 import os
 import re
@@ -41,24 +44,39 @@ def cases_to_export_rows(cases: list[dict], suite: str = "") -> list[dict]:
                 "case_id": text(case.get("id")),
                 "title": text(case.get("test_point")),
                 "preconditions": text(case.get("precondition")),
-                "priority": priority_to_jira(text(case.get("priority")), text(case.get("type"))),
+                "priority": priority_to_jira(
+                    text(case.get("priority")), text(case.get("type"))
+                ),
+                "priority_raw": text(case.get("priority"))
+                or priority_to_jira("", text(case.get("type"))),
                 "steps": steps,
                 "expected": text(case.get("expected")),
                 "checkpoints": text(case.get("checkpoint")),
                 "suite": suite,
                 "scene_type": text(case.get("type")),
+                "module": text(case.get("module")),
             }
         )
     return rows
 
 
-def write_csv(testcases: list[dict], output_path: str) -> None:
+def write_jira_csv(testcases: list[dict], output_path: str) -> None:
     with open(output_path, "w", newline="", encoding="utf-8-sig") as handle:
         writer = csv.writer(handle)
         writer.writerow(
-            ["序号", "标题", "描述", "优先级", "步骤ID", "步骤", "测试数据", "期望结果", "需求", "测试用例集"]
+            [
+                "序号",
+                "标题",
+                "描述",
+                "优先级",
+                "步骤ID",
+                "步骤",
+                "测试数据",
+                "期望结果",
+                "需求",
+                "测试用例集",
+            ]
         )
-
         for tc in testcases:
             if not tc["steps"]:
                 writer.writerow(
@@ -76,7 +94,6 @@ def write_csv(testcases: list[dict], output_path: str) -> None:
                     ]
                 )
                 continue
-
             first = True
             for step_no, action in tc["steps"]:
                 if first:
@@ -112,18 +129,97 @@ def write_csv(testcases: list[dict], output_path: str) -> None:
                     )
 
 
-def main() -> int:
-    if len(sys.argv) != 3:
-        print("用法: python3 md_to_csv.py <input_md> <output_csv>")
-        print(
-            "示例: python3 md_to_csv.py "
-            ".testcase-assets/history/xxx/2-用例定稿.md "
-            ".testcase-assets/history/xxx/jira_export.csv"
+def write_tapd_csv(testcases: list[dict], output_path: str) -> None:
+    """Tapd 用例导入常用列（可按团队模板再调）。"""
+    with open(output_path, "w", newline="", encoding="utf-8-sig") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(
+            [
+                "用例目录",
+                "用例名称",
+                "前置条件",
+                "用例步骤",
+                "预期结果",
+                "用例类型",
+                "优先级",
+                "备注",
+            ]
         )
-        return 1
+        for tc in testcases:
+            steps_text = "\n".join(
+                f"{no}. {action}" for no, action in tc["steps"]
+            ) or tc["title"]
+            writer.writerow(
+                [
+                    tc["module"] or tc["suite"],
+                    tc["title"],
+                    tc["preconditions"],
+                    steps_text,
+                    tc["expected"],
+                    tc["scene_type"] or "功能测试",
+                    tc["priority_raw"] or tc["priority"],
+                    tc["checkpoints"],
+                ]
+            )
 
-    input_path = sys.argv[1]
-    output_path = sys.argv[2]
+
+def write_zentao_csv(testcases: list[dict], output_path: str) -> None:
+    """禅道用例导入常用列。"""
+    with open(output_path, "w", newline="", encoding="utf-8-sig") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(
+            [
+                "所属模块",
+                "用例标题",
+                "前置条件",
+                "步骤",
+                "预期",
+                "关键词",
+                "优先级",
+                "用例类型",
+                "适用阶段",
+            ]
+        )
+        for tc in testcases:
+            steps_text = "\n".join(
+                f"{no}. {action}" for no, action in tc["steps"]
+            ) or tc["title"]
+            writer.writerow(
+                [
+                    tc["module"] or tc["suite"],
+                    tc["title"],
+                    tc["preconditions"],
+                    steps_text,
+                    tc["expected"],
+                    tc["checkpoints"],
+                    tc["priority_raw"] or tc["priority"],
+                    tc["scene_type"] or "功能",
+                    "功能测试阶段",
+                ]
+            )
+
+
+WRITERS = {
+    "jira": write_jira_csv,
+    "tapd": write_tapd_csv,
+    "zentao": write_zentao_csv,
+}
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("input_md", help="2-用例定稿.md")
+    parser.add_argument("output_csv", help="输出 CSV 路径")
+    parser.add_argument(
+        "--tool",
+        default="jira",
+        choices=sorted(WRITERS.keys()),
+        help="目标工具模板：jira / tapd / zentao",
+    )
+    args = parser.parse_args()
+
+    input_path = args.input_md
+    output_path = args.output_csv
 
     if not os.path.exists(input_path):
         print(f"[FAIL] 输入文件不存在: {input_path}")
@@ -152,14 +248,10 @@ def main() -> int:
     testcases = cases_to_export_rows(cases, suite=suite)
     if not testcases:
         print("[WARN] 未解析到任何用例，请检查 MD 文件格式是否正确")
-        print(
-            "  预期格式: | TC-xxx | 测试点 | 前置条件 | 操作步骤 | "
-            "预期结果 | 关联检查点 | 场景类型 | 优先级 |"
-        )
         return 1
 
     try:
-        write_csv(testcases, output_path)
+        WRITERS[args.tool](testcases, output_path)
     except PermissionError:
         print(f"[FAIL] 无写入权限: {output_path}")
         return 1
@@ -167,7 +259,7 @@ def main() -> int:
         print(f"[FAIL] 写入 CSV 失败: {error}")
         return 1
 
-    print(f"[OK] 已生成 Jira CSV: {output_path}")
+    print(f"[OK] 已生成 {args.tool} CSV: {output_path}")
     print(f"  用例总数: {len(testcases)} 条")
     print("  编码: UTF-8 with BOM")
     return 0

@@ -29,8 +29,19 @@ reference 中的要求是本流程的一部分，读取后必须执行，不得�
 请先完善配置，再重新触发 /testcase-creator。
 ```
 
-5. 初始化通过后输出资产加载成功信息，并询问运行模式：
+5. **框架版本体检**（不阻断占位符检查之后的流程选择，但版本落后须先提示）：
 
+```bash
+python3 .testcase-assets/scripts/check_framework_version.py --strict
+```
+
+- 退出码 0：版本一致，继续。
+- 退出码非 0：向用户展示脚本输出，并提示在 Skills 仓库执行  
+  `./init-testcase.sh <项目名> <本项目路径> --sync`  
+  （本仓库 `projects/*` 可用 `python3 check_project_copies.py --fix` 或 `./sync-projects.sh`）。  
+  **版本落后时不得继续生成/导出**（避免旧脚本缺 `md_to_json` / `export_all` 等能力）。用户完成 sync 后重新触发本 Skill。
+
+6. 初始化通过后输出资产加载成功信息，并询问运行模式：
 ```text
 【运行模式】
 A. 全量新建（完整五阶段）
@@ -115,9 +126,23 @@ Token 统计：能读到终端累计值时各阶段可记录；读不到则跳�
 2. 收集分类和描述，读取现有最大编号后递增分配。
 3. 按编号前缀和描述关键词去重。
 4. 追加到对应分类末尾，不覆盖、不重排既有编号，并记录日期和来源。
-5. 输出追加内容预览。
+5. 输出追加内容预览；**须用户确认后才写入 index**。
 
-也可从缺陷列表提炼 `BUG-xx` 评审点或检查点后走本流程。
+### 从缺陷列表结构化沉淀
+
+用户提供缺陷列表（粘贴或文件）时：
+
+```bash
+python3 .testcase-assets/scripts/suggest_assets_from_bugs.py <缺陷文件> \
+  --kind review|checkpoint|both \
+  --checkpoints-index .testcase-assets/checkpoints-index.md \
+  --review-index .testcase-assets/review-expectations-index.md \
+  --output <运行目录或临时>/缺陷沉淀候选.md
+```
+
+1. 向用户展示候选表（编号 / 描述 / 来源）。
+2. 用户确认或改编号/分类后，再追加到对应 index。
+3. **禁止**脚本或 Agent 在未确认时自动改写 index。
 
 ## 文件约定
 
