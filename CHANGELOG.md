@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [1.11.0] - 2026-08-14
+
+### Added
+
+- **环境体检** `check_environment.py`：Python/依赖/版本/资产目录；pdftotext 等可选能力 WARN 降级
+- **阶段门禁** `gate_stage.py`：`init|prepare|merge|draft|export`，只认产物与 `[GATE OK]`
+- **阶段回执模板**：关键阶段须贴命令、退出码、产物与门禁结果
+- **检查点推荐脚本** `recommend_checkpoints.py` + `templates/recommend-rules.yaml`（可解释命中原因）
+- **历史两级召回** `recommend_history.py`：先目录后用例
+- 阶段 1 **输入完备性表**（OK / 降级 / 失败）
+
+### Changed
+
+- testcase-creator **1.11.0**，testcase-export **1.9.0**
+- 初始化 / 增量合并 / 导出工作流强制 gate；推荐与历史复用优先走脚本
+
+### Docs
+
+- README / TESTCASE_GUIDE / CHANGELOG 同步 1.11
+
 ## [1.10.0] - 2026-08-14
 
 ### Added

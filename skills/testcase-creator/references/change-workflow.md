@@ -123,6 +123,14 @@ for each 新增: 追加（ID 不得与有效基线冲突）
 
 校验失败（错号、撞号、废弃不存在等）时：修正变更集后重跑，**禁止** `--allow-warnings` 跳过除非用户明确要求。
 
+合并成功后**必须**跑门禁（须出现 `[GATE OK] stage=merge`）：
+
+```bash
+python3 .testcase-assets/scripts/gate_stage.py --stage merge --run-dir <运行目录>
+```
+
+未过关不得进入评审或定稿。阶段回执中须粘贴 merge 与 gate 命令输出。
+
 写入 `1-评审记要.md` 时：
 
 1. 文首含脚本生成的变更合并摘要

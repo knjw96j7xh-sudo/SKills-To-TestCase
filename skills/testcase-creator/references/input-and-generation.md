@@ -46,6 +46,14 @@
 - **接口/端点**：[如有]
 - **涉及角色**：[角色]
 
+### 输入完备性
+
+| 来源 | 状态 | 说明 |
+|------|------|------|
+| 需求正文 | OK / 降级 / 失败 | … |
+| 设计稿 | OK / 降级 / 失败 | 如：无 pdftotext，仅弱解析 |
+| 外部链接 | OK / 失败 | 失败则待用户粘贴，禁止编造 |
+
 ### 设计稿分析
 
 - **设计范围**：[文件 / 页面 / 节点]
@@ -73,42 +81,49 @@
 
 ### 2a 检查点选择（含推荐）
 
-读取 `.testcase-assets/checkpoints-index.md`，按原分类完整展示。
+读取 `.testcase-assets/checkpoints-index.md`。优先用脚本生成可解释推荐：
 
-基于阶段 1 的测试对象、业务规则、设计要素与 `project.config.md` 业务域，给出**推荐预勾**（规则，非向量服务）：
+```bash
+python3 .testcase-assets/scripts/recommend_checkpoints.py \
+  --checkpoints .testcase-assets/checkpoints-index.md \
+  --text "<测试对象+业务规则+设计要点>" \
+  --rules .testcase-assets/recommend-rules.yaml \
+  --output <运行目录>/2a-检查点推荐.md
+```
 
-1. 域匹配：业务域 / 模块名 ↔ 检查点分类标题  
-2. 关键词：规则与检查点描述的字面重合  
-3. 设计信号：上传 / 列表 / 权限等映射到 FILE / LIST / RISK 等  
-4. 排除描述含 `[已废弃]` 的检查点  
-5. 推荐总数建议不超过 15 条（或每域 Top N），避免变相全选  
+规则文件可从 `templates/recommend-rules.yaml` 复制到 `.testcase-assets/` 后按项目修改。  
+推荐须展示**命中原因**；排除 `[已废弃]`；上限见规则 `max_recommend`。
 
 ```text
 【阶段 2a — 检查点选择】
-已根据需求预推荐（可改）：
-  [*] UC-01 ...
-  [*] LIST-02 ...
+已根据规则预推荐（可改）：
+  [*] LIST-02 ...  ← 设计信号「分页」
   [ ] FILE-01 ...（未推荐，可手选）
 
-完整分类列表见上方/下方索引。
 请输入：编号列表 / 采用推荐 / 全选 / 跳过
 ```
 
 默认快捷回复为「采用推荐」，不是静默自动确认。
 
-### 2b 历史用例复用（可选）
+### 2b 历史用例复用（可选，两级）
 
-扫描 `.testcase-assets/history/*/2-用例定稿.md`，默认最近 10 次。按目录名、标题、模块列与当前测试对象的字面相近度列出候选；也可让用户指定目录。
+**一级选目录，二级选用例**，禁止一次扫描灌入全部 history 全文。
+
+```bash
+python3 .testcase-assets/scripts/recommend_history.py \
+  --history-root .testcase-assets/history --module "<测试对象>" \
+  --rules .testcase-assets/recommend-rules.yaml --list-dirs --limit 10
+
+python3 .testcase-assets/scripts/recommend_history.py \
+  --history-root .testcase-assets/history --dir <选定目录名> --list-cases
+```
 
 ```text
 【阶段 2b — 历史用例复用】（可跳过）
-来自 <目录名>：
-  [1] TC-012  提交绩效  正向  P1
-  [2] TC-015  重复提交  异常  P0
+一级目录候选 → 用户选定后 → 二级用例列表（ID/测试点/类型/优先级）
 请输入要复用的编号（可多选），或回复“跳过”
 ```
 
-列表只给 ID、测试点、场景类型、优先级，不整表灌入上下文。  
 **未经用户勾选，不得复制任何历史用例。**  
 增量变更模式跳过 2b。
 

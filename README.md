@@ -276,8 +276,10 @@ vim projects/<项目名>/checkpoints-index.md      # 添加检查点
 **主输入始终是 `2-用例定稿.md`。** 推荐一键导出：
 
 ```bash
-# 版本体检（Skill 启动也会跑）
-python3 .testcase-assets/scripts/check_framework_version.py
+# 环境 + 版本体检 / 阶段门禁（Skill 启动与关键阶段会跑）
+python3 .testcase-assets/scripts/check_environment.py --strict
+python3 .testcase-assets/scripts/gate_stage.py --stage init
+# 导出后：gate_stage.py --stage export --run-dir <运行目录> --formats j,e,x
 
 # 一键：质检 → JSON → CSV + Excel + XMind
 python3 .testcase-assets/scripts/export_all.py \
@@ -297,6 +299,10 @@ python3 .testcase-assets/scripts/export_all.py \
 | 脚本 | 作用 |
 |------|------|
 | `check_framework_version.py` | 检查 FRAMEWORK_VERSION 是否落后 |
+| `check_environment.py` | 环境能力体检（依赖/版本/可选工具） |
+| `gate_stage.py` | 阶段产物门禁（init/prepare/merge/draft/export） |
+| `recommend_checkpoints.py` | 检查点规则推荐（可解释） |
+| `recommend_history.py` | 历史复用两级召回 |
 | `export_all.py` | 一键质检+导出；支持冒烟子集 |
 | `merge_cases.py` | 增量变更集合并与校验 |
 | `suggest_assets_from_bugs.py` | 缺陷 → 检查点/评审点候选 |

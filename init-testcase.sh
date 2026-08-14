@@ -217,6 +217,13 @@ for f in "$SCRIPT_DIR"/framework/templates/*; do
   [ -f "$f" ] && copy_item "$f" "$TARGET_DIR/.testcase-assets/templates/$(basename "$f")" ".testcase-assets/templates/$(basename "$f")" managed
 done
 
+# 推荐规则：仅当目标不存在时放入 .testcase-assets（项目可改，sync 不覆盖）
+if [ -f "$SCRIPT_DIR/framework/templates/recommend-rules.yaml" ]; then
+  copy_item "$SCRIPT_DIR/framework/templates/recommend-rules.yaml" \
+    "$TARGET_DIR/.testcase-assets/recommend-rules.yaml" \
+    ".testcase-assets/recommend-rules.yaml" project
+fi
+
 for f in "$SCRIPT_DIR"/framework/scripts/*; do
   [ -f "$f" ] || continue
   # 跳过缓存与非脚本噪音
@@ -319,6 +326,10 @@ cat > "$SETTINGS_FILE" << SETTINGS_EOF
       "Bash(textutil -convert txt -stdout ${HOME}/Downloads/*.docx)",
       "Bash(textutil -convert txt -stdout ${HOME}/Desktop/*.docx)",
       "Bash(python3 .testcase-assets/scripts/check_framework_version.py *)",
+      "Bash(python3 .testcase-assets/scripts/check_environment.py *)",
+      "Bash(python3 .testcase-assets/scripts/gate_stage.py *)",
+      "Bash(python3 .testcase-assets/scripts/recommend_checkpoints.py *)",
+      "Bash(python3 .testcase-assets/scripts/recommend_history.py *)",
       "Bash(python3 .testcase-assets/scripts/md_to_json.py .testcase-assets/history/*/2-用例定稿.md .testcase-assets/history/*/export_data.json *)",
       "Bash(python3 .testcase-assets/scripts/export_all.py *)",
       "Bash(python3 .testcase-assets/scripts/merge_cases.py *)",

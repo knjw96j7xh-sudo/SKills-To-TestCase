@@ -125,7 +125,22 @@ python3 .testcase-assets/scripts/testcase_quality.py \
   --strict
 ```
 
-## 5. 完成处理
+## 5. 门禁与回执
+
+导出前后须跑门禁（须出现 `[GATE OK]`）：
+
+```bash
+# 定稿已写好
+python3 .testcase-assets/scripts/gate_stage.py --stage draft --run-dir <运行目录>
+
+# 导出完成后（按实际格式改 --formats）
+python3 .testcase-assets/scripts/gate_stage.py --stage export --run-dir <运行目录> --formats j,e,x
+```
+
+阶段回执须包含：执行的 export/gate 命令、退出码、产物路径、`[GATE OK] stage=export`。  
+**未过 gate 不得宣称导出完成。**
+
+## 6. 完成处理
 
 将本次运行记录追加到 `.testcase-assets/history/history-index.md`。增量模式须标注 `mode: 增量` 与基线目录名。输出至少包含：
 

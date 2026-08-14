@@ -8,8 +8,8 @@ from pathlib import Path
 
 # 发布时与 skills/testcase-creator|export 的 meta.yaml version 对齐
 EXPECTED = {
-    "testcase-creator": "1.10.0",
-    "testcase-export": "1.8.0",
+    "testcase-creator": "1.11.0",
+    "testcase-export": "1.9.0",
 }
 
 

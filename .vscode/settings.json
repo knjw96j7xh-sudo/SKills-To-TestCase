@@ -1,0 +1,16 @@
+{
+    "python.defaultInterpreterPath": "/Users/xiabo/miniconda3/bin/python3",
+    "python.terminal.activateEnvironment": true,
+    "python.terminal.activateEnvInCurrentTerminal": true,
+    "python.condaPath": "/Users/xiabo/miniconda3/bin/conda",
+    "terminal.integrated.env.osx": {
+        "PATH": "/Users/xiabo/miniconda3/bin:${env:PATH}",
+        "CONDA_DEFAULT_ENV": "base",
+        "CONDA_PREFIX": "/Users/xiabo/miniconda3",
+        "CONDA_SHLVL": "1",
+        "CONDA_EXE": "/Users/xiabo/miniconda3/bin/conda"
+    },
+    "python.terminal.executeInFileDir": true,
+    "python.languageServer": "Pylance",
+    "terminal.integrated.shellIntegration.enabled": true
+}

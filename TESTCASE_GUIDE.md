@@ -2,7 +2,7 @@
 
 > 适用工具：ChatGPT、GitHub Copilot Chat、Codex CLI 等无原生文件读写的纯对话工具。  
 > 使用方式：将本文件全文复制，连同检查点/评审点索引内容一起粘贴到对话开头，AI 将按流程执行。  
-> 版本对应：testcase-creator **1.10.0**（版本体检、一键导出/冒烟子集、增量 merge_cases、缺陷沉淀候选、多工具 CSV；见 CHANGELOG 1.10.0）。
+> 版本对应：testcase-creator **1.11.0**（环境体检、阶段门禁、推荐规则/历史两级召回；见 CHANGELOG 1.11.0）。
 
 ---
 
@@ -510,4 +510,4 @@ python3 .testcase-assets/scripts/export_xmind.py \
 
 ---
 
-*对应 testcase-creator 1.10.0 · 最后更新：2026-08-14*
+*对应 testcase-creator 1.11.0 · 最后更新：2026-08-14*

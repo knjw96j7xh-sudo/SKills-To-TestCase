@@ -118,11 +118,11 @@ class SkillContractTest(unittest.TestCase):
     def test_versions(self):
         creator = (ROOT / "skills/testcase-creator/meta.yaml").read_text(encoding="utf-8")
         export = (ROOT / "skills/testcase-export/meta.yaml").read_text(encoding="utf-8")
-        self.assertIn('version: "1.10.0"', creator)
-        self.assertIn('version: "1.8.0"', export)
+        self.assertIn('version: "1.11.0"', creator)
+        self.assertIn('version: "1.9.0"', export)
         versions = load_module("framework_versions", SCRIPTS / "framework_versions.py")
-        self.assertEqual("1.10.0", versions.EXPECTED["testcase-creator"])
-        self.assertEqual("1.8.0", versions.EXPECTED["testcase-export"])
+        self.assertEqual("1.11.0", versions.EXPECTED["testcase-creator"])
+        self.assertEqual("1.9.0", versions.EXPECTED["testcase-export"])
 
     def test_prompt_requires_version_check_and_merge_script(self):
         prompt = (ROOT / "skills/testcase-creator/prompt.md").read_text(encoding="utf-8")
@@ -132,9 +132,12 @@ class SkillContractTest(unittest.TestCase):
         export_ref = (
             ROOT / "skills/testcase-creator/references/export-workflow.md"
         ).read_text(encoding="utf-8")
-        self.assertIn("check_framework_version.py", prompt)
+        self.assertIn("check_environment.py", prompt)
+        self.assertIn("gate_stage.py", prompt)
+        self.assertIn("recommend_checkpoints.py", prompt)
         self.assertIn("export_all.py", export_ref)
         self.assertIn("merge_cases.py", change)
+        self.assertIn("gate_stage.py", change)
         self.assertIn("suggest_assets_from_bugs.py", prompt)
 
 
@@ -399,6 +402,142 @@ class VersionAndMergeTest(unittest.TestCase):
             text = out.read_text(encoding="utf-8")
             self.assertIn("BUG-01", text)
             self.assertIn("提交重复数据", text)
+
+    def test_environment_gate_and_recommend(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            assets = temp_path / ".testcase-assets"
+            assets.mkdir()
+            (assets / "checkpoints-index.md").write_text(
+                "## 列表\n- [LIST-01] 分页与筛选\n- [FILE-01] 附件上传\n- [RISK-01] 权限校验 [已废弃]\n",
+                encoding="utf-8",
+            )
+            (assets / "review-expectations-index.md").write_text("# r\n", encoding="utf-8")
+            versions = load_module("framework_versions", SCRIPTS / "framework_versions.py")
+            versions.write_version_file(assets)
+
+            env = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPTS / "check_environment.py"),
+                    str(temp_path),
+                    "--strict",
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(0, env.returncode, env.stdout + env.stderr)
+            self.assertIn("[OK]", env.stdout)
+
+            gate = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPTS / "gate_stage.py"),
+                    "--stage",
+                    "init",
+                    "--path",
+                    str(temp_path),
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(0, gate.returncode, gate.stdout + gate.stderr)
+            self.assertIn("[GATE OK] stage=init", gate.stdout)
+
+            rec = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPTS / "recommend_checkpoints.py"),
+                    "--checkpoints",
+                    str(assets / "checkpoints-index.md"),
+                    "--text",
+                    "列表支持分页，需要上传附件",
+                    "--output",
+                    str(temp_path / "rec.md"),
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(0, rec.returncode, rec.stdout + rec.stderr)
+            rec_text = (temp_path / "rec.md").read_text(encoding="utf-8")
+            self.assertIn("LIST-01", rec_text)
+            self.assertIn("FILE-01", rec_text)
+            self.assertNotIn("RISK-01", rec_text)
+
+            run_dir = assets / "history" / "run1"
+            run_dir.mkdir(parents=True)
+            # merge gate fail without files
+            g_fail = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPTS / "gate_stage.py"),
+                    "--stage",
+                    "merge",
+                    "--run-dir",
+                    str(run_dir),
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(1, g_fail.returncode)
+            self.assertIn("[GATE FAIL]", g_fail.stdout)
+
+            (run_dir / "1-变更集.md").write_text(
+                "### 新增\n### 修改\n### 废弃\n", encoding="utf-8"
+            )
+            (run_dir / "1-评审记要.md").write_text(
+                "## 变更合并摘要\n- 合并后有效：1 条\n\n## 模块\n"
+                "| 用例ID | 所属模块 | 测试点 | 前置条件 | 操作步骤 | 预期结果 | 关联检查点 | 场景类型 | 优先级 |\n"
+                "|--------|----------|--------|----------|----------|----------|------------|----------|--------|\n"
+                "| TC-001 | 模块 | 点 | 无 | 1. a | 1. b | | 正向 | P1 |\n",
+                encoding="utf-8",
+            )
+            g_ok = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPTS / "gate_stage.py"),
+                    "--stage",
+                    "merge",
+                    "--run-dir",
+                    str(run_dir),
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(0, g_ok.returncode, g_ok.stdout + g_ok.stderr)
+
+            # history two-level
+            (run_dir / "2-用例定稿.md").write_text(
+                "## 组织树\n"
+                "| 用例ID | 所属模块 | 测试点 | 前置条件 | 操作步骤 | 预期结果 | 关联检查点 | 场景类型 | 优先级 |\n"
+                "|--------|----------|--------|----------|----------|----------|------------|----------|--------|\n"
+                "| TC-009 | 组织树 | 展开节点 | 无 | 1. 点 | 1. 展开 | | 正向 | P1 |\n",
+                encoding="utf-8",
+            )
+            # rename dir for alias match
+            org_dir = assets / "history" / "20260101_组织树演示"
+            run_dir.rename(org_dir)
+            hist = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPTS / "recommend_history.py"),
+                    "--history-root",
+                    str(assets / "history"),
+                    "--module",
+                    "组织树",
+                    "--list-dirs",
+                ],
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+            self.assertEqual(0, hist.returncode, hist.stdout + hist.stderr)
+            self.assertIn("组织树", hist.stdout)
 
 
 if __name__ == "__main__":

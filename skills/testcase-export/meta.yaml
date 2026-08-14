@@ -1,6 +1,6 @@
 name: testcase-export
 description: "独立导出命令，从已定稿 Markdown 经脚本生成 Jira CSV / Excel / XMind（MD→质检/JSON→导出）"
-version: "1.8.0"
+version: "1.9.0"
 
 platforms:
   claude:

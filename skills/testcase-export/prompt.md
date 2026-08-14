@@ -24,10 +24,11 @@
   [2] 20260615_090000_用户中心    （45 条用例，2026-06-15）
 ```
 
-导出前建议跑版本体检（落后则提示 `--sync`，勿用旧脚本硬导）：
+导出前须跑环境/版本与门禁（落后则提示 `--sync`，勿用旧脚本硬导）：
 
 ```bash
-python3 .testcase-assets/scripts/check_framework_version.py
+python3 .testcase-assets/scripts/check_environment.py
+python3 .testcase-assets/scripts/gate_stage.py --stage draft --run-dir .testcase-assets/history/<选定目录>
 ```
 
 ---
@@ -125,6 +126,14 @@ python3 .testcase-assets/scripts/export_xmind.py \
 ```
 
 Excel 后再跑公式审计（若生成了 xlsx）。
+
+导出完成后须门禁：
+
+```bash
+python3 .testcase-assets/scripts/gate_stage.py --stage export --run-dir .testcase-assets/history/<选定目录> --formats j,e,x
+```
+
+须出现 `[GATE OK] stage=export`，并在阶段回执中粘贴命令输出。未过关不得宣称导出完成。
 
 ---
 

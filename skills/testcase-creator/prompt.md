@@ -29,19 +29,29 @@ reference 中的要求是本流程的一部分，读取后必须执行，不得�
 请先完善配置，再重新触发 /testcase-creator。
 ```
 
-5. **框架版本体检**（不阻断占位符检查之后的流程选择，但版本落后须先提示）：
+5. **环境 + 版本体检**（须跑命令并贴输出）：
 
 ```bash
-python3 .testcase-assets/scripts/check_framework_version.py --strict
+python3 .testcase-assets/scripts/check_environment.py --strict
+python3 .testcase-assets/scripts/gate_stage.py --stage init
 ```
 
-- 退出码 0：版本一致，继续。
-- 退出码非 0：向用户展示脚本输出，并提示在 Skills 仓库执行  
-  `./init-testcase.sh <项目名> <本项目路径> --sync`  
-  （本仓库 `projects/*` 可用 `python3 check_project_copies.py --fix` 或 `./sync-projects.sh`）。  
-  **版本落后时不得继续生成/导出**（避免旧脚本缺 `md_to_json` / `export_all` 等能力）。用户完成 sync 后重新触发本 Skill。
+- `check_environment`：Python/依赖/版本/资产目录；可选工具缺失只 WARN 并说明降级。
+- `gate_stage init` 必须打印 `[GATE OK] stage=init`，否则**不得**进入模式选择与后续阶段。
+- 版本或阻断项失败：提示 `./init-testcase.sh <项目名> <本项目路径> --sync` 或本仓库 `./sync-projects.sh`。
 
 6. 初始化通过后输出资产加载成功信息，并询问运行模式：
+
+**阶段回执（每个关键阶段结束必须输出，不得省略）：**
+
+```text
+【阶段回执】
+- 阶段：init|prepare|merge|draft|export|…
+- 已执行命令：（完整命令行）
+- 退出码：
+- 关键产物路径：
+- 门禁：`[GATE OK] stage=…` 或未过关原因
+```
 ```text
 【运行模式】
 A. 全量新建（完整五阶段）
@@ -61,9 +71,10 @@ Token 统计：能读到终端累计值时各阶段可记录；读不到则跳�
 1. 提示用户选择 A-H 的需求来源，可组合提供文字需求和设计稿导出文件。
 2. 读取文件或链接，保留多来源归属。设计稿 PDF 必须同时检查文本和渲染页面。
 3. 输出需求要素、设计要素及两者差异，等待用户明确回复“确认”。
-4. 确认后清理模块名中的文件系统非法字符，创建：
+4. 解析结果中必须包含 **输入完备性表**（来源 / 状态 OK·降级·失败 / 说明）；链接读失败不得编造正文。
+5. 确认后清理模块名中的文件系统非法字符，创建：
    `.testcase-assets/history/<YYYYMMDD>_<HHMMSS>_<模块名>/`。
-5. 后续文件全部写入该运行目录。
+6. 后续文件全部写入该运行目录。
 
 不得用设计稿覆盖文字需求；发现冲突时必须列为待确认项。
 
@@ -71,10 +82,37 @@ Token 统计：能读到终端累计值时各阶段可记录；读不到则跳�
 
 触发条件：用户确认阶段 1 解析结果。细则见 `input-and-generation.md` 阶段 2（含 2a 检查点推荐、2b 历史复用）。
 
-1. **2a 检查点**：展示索引全部分类，并给出推荐预勾；接受编号列表、「采用推荐」、「全选」或「跳过」。不得静默替用户选定。
-2. **2b 历史复用（可选）**：扫描近期 history 定稿，列出候选供勾选，或「跳过」。不得未经勾选整表复制历史。增量模式不做 2b。
-3. 生成需求要素、设计要素、差异项、已关联检查点、复用映射摘要。
-4. 写入 `<运行目录>/0-用例准备.md`。
+1. **2a 检查点**：优先跑推荐脚本（可解释命中原因），再展示完整索引；接受编号列表、「采用推荐」、「全选」或「跳过」。不得静默替用户选定。
+
+```bash
+python3 .testcase-assets/scripts/recommend_checkpoints.py \
+  --checkpoints .testcase-assets/checkpoints-index.md \
+  --text "<阶段1摘要：测试对象+业务规则+设计要点>" \
+  --rules .testcase-assets/recommend-rules.yaml \
+  --output <运行目录>/2a-检查点推荐.md
+```
+
+（无 `recommend-rules.yaml` 时脚本用内置默认；可将 `templates/recommend-rules.yaml` 复制到 `.testcase-assets/` 后按项目改。）
+
+2. **2b 历史复用（可选，两级）**：先列目录，再列用例；不得一次灌入全部 history。增量模式不做 2b。
+
+```bash
+python3 .testcase-assets/scripts/recommend_history.py \
+  --history-root .testcase-assets/history --module "<测试对象>" \
+  --rules .testcase-assets/recommend-rules.yaml --list-dirs
+
+python3 .testcase-assets/scripts/recommend_history.py \
+  --history-root .testcase-assets/history --dir <选定目录> --list-cases
+```
+
+3. 生成需求要素、设计要素、差异项、已关联检查点（含推荐来源）、复用映射摘要。
+4. 写入 `<运行目录>/0-用例准备.md` 后跑门禁：
+
+```bash
+python3 .testcase-assets/scripts/gate_stage.py --stage prepare --run-dir <运行目录>
+```
+
+须出现 `[GATE OK] stage=prepare`。
 5. 等待用户回复“生成用例”。
 
 ## 3. 用例生成（阶段 3/5）— 全量模式
