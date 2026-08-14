@@ -26,3 +26,6 @@ __pycache__/
 /testcases_*.xlsx
 /testcases_*.xmind
 /export_data_*.json
+
+# 本地编辑器
+.vscode/
